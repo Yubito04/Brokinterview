@@ -4,7 +4,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.database import Base, get_session
+from alembic_helpers import downgrade_to_base, reset_schema, upgrade_to_head
+from app.database import get_session
 from app.main import app
 from db_safety import ensure_safe_test_database
 
@@ -25,11 +26,14 @@ def pytest_sessionstart(session):
 
 @pytest.fixture(scope="session")
 def engine():
-    # Tables are created once for the whole run, then dropped at the end.
+    # The schema is built by the real Alembic migrations, once for the whole run,
+    # so the tests use exactly the schema that production will have.
+    # At the end the downgrade removes it again (this also exercises the downgrade).
     test_engine = create_engine(_test_database_url)
-    Base.metadata.create_all(test_engine)
+    reset_schema(test_engine)
+    upgrade_to_head(test_engine)
     yield test_engine
-    Base.metadata.drop_all(test_engine)
+    downgrade_to_base(test_engine)
     test_engine.dispose()
 
 
