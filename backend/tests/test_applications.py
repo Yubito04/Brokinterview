@@ -63,16 +63,19 @@ def test_client_cannot_choose_the_id(client):
 
 def test_list_is_empty_at_the_start_of_each_test(client):
     # Proves the rollback isolation: other tests created applications before.
-    assert client.get("/applications").json() == []
+    body = client.get("/applications").json()
+
+    assert body["items"] == []
+    assert body["total"] == 0
 
 
-def test_list_returns_created_applications_in_order(client):
+def test_list_returns_newest_application_first(client):
     create_application(client, company="First")
     create_application(client, company="Second")
 
-    companies = [a["company"] for a in client.get("/applications").json()]
+    companies = [a["company"] for a in client.get("/applications").json()["items"]]
 
-    assert companies == ["First", "Second"]
+    assert companies == ["Second", "First"]
 
 
 # --- GET /applications/{id} ---
