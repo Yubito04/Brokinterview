@@ -4,7 +4,7 @@ Job application tracker with LLM-based job posting extraction (work in progress)
 
 ## Stack
 
-- Backend: Python, FastAPI, Pydantic, SQLAlchemy, PostgreSQL (Alembic planned)
+- Backend: Python, FastAPI, Pydantic, SQLAlchemy, Alembic, PostgreSQL
 - Frontend: React + TypeScript (planned)
 - Tests: pytest
 
@@ -14,6 +14,7 @@ Job application tracker with LLM-based job posting extraction (work in progress)
    `applyflow_test` (tests only).
 2. Copy `backend/.env.example` to `backend/.env` and put your real password in it.
    The `.env` file is ignored by Git.
+3. Create the tables: `cd backend`, then `.venv\Scripts\python.exe -m alembic upgrade head`.
 
 The `.env` file is found from the location of the code, so commands can be run
 from any folder. The test database name must end with `_test` and differ from the
@@ -33,9 +34,27 @@ The API is then available at http://127.0.0.1:8765 (interactive docs at `/docs`)
 on the default port 8000 (error 10013, "access forbidden", usually a port range
 reserved by the system). Any free port works; change `--port` if 8765 is taken.
 
-The database tables do not exist yet in `applyflow`: they will be created by the
-first Alembic migration. Until then, the routes that use the database only work in
-the tests.
+## Database migrations (Alembic)
+
+The schema is created and changed by migrations in `backend/alembic/versions/`,
+never by hand.
+
+```powershell
+cd backend
+.venv\Scripts\python.exe -m alembic upgrade head      # apply all migrations (create the tables)
+.venv\Scripts\python.exe -m alembic current           # which version the database is at
+.venv\Scripts\python.exe -m alembic downgrade -1      # undo the last migration
+```
+
+After changing a model in `app/models.py`, generate a migration, **read it**, then apply it:
+
+```powershell
+.venv\Scripts\python.exe -m alembic revision --autogenerate -m "describe the change"
+```
+
+Autogenerate is not perfect (for example it does not drop PostgreSQL enum types in
+`downgrade`), so always review the generated file. The test suite fails if a model
+changed without a migration.
 
 ## Run the tests
 
@@ -44,9 +63,12 @@ cd backend
 .venv\Scripts\python.exe -m pytest
 ```
 
-Route tests use the real PostgreSQL test database. Tables are created once per run;
-each test runs in a transaction that is rolled back at the end, so tests never see
-each other's data.
+Route tests use the real PostgreSQL test database. At the start of a run the test
+database is emptied and rebuilt with the real Alembic migrations, so tests use the
+same schema as production; at the end the migrations are downgraded. Each test runs
+in a transaction that is rolled back, so tests never see each other's data.
+`tests/test_migrations.py` checks that models and migrations are in sync and that
+upgrade, downgrade, upgrade works (including the PostgreSQL enum type).
 
 ## Data model
 

@@ -235,8 +235,56 @@ L'erreur `10013` au démarrage d'uvicorn sur le port 8000 vient de Windows qui r
 l'accès à ce port (souvent une plage réservée par le système). On choisit simplement
 un autre port libre, ici 8765 (`--port 8765`).
 
+## 28. Migration de base de données (Alembic)
+
+**Idée simple.** Une migration est un script versionné qui décrit un changement de schéma,
+avec deux sens : `upgrade` (appliquer) et `downgrade` (annuler). C'est le « git » de la
+base de données : chaque migration est un commit de schéma, et la base sait à quelle
+version elle est (table `alembic_version`).
+
+**Commandes.**
+- `alembic revision --autogenerate -m "..."` : compare les modèles à la base et écrit le script.
+- `alembic upgrade head` : applique toutes les migrations manquantes.
+- `alembic current` : version actuelle. `alembic downgrade -1` : annule la dernière.
+
+**Règles.** Toujours relire une migration autogénérée. Ne jamais modifier une migration
+déjà appliquée : on en crée une nouvelle.
+
+## 29. Anatomie d'un fichier de migration
+
+- `revision` : identifiant de cette migration. `down_revision` : la précédente
+  (`None` pour la première). Elles forment une chaîne, comme les commits.
+- `upgrade()` et `downgrade()` : les deux sens, avec `op.create_table`, `op.drop_table`...
+- `alembic/env.py` : le point de branchement. Il dit à Alembic où sont les modèles
+  (`Base.metadata`) et comment se connecter à la base.
+
+## 30. Les types enum PostgreSQL et le piège du downgrade
+
+PostgreSQL stocke un enum comme un **type** séparé de la table. `create_table` le crée
+automatiquement, mais `drop_table` ne le supprime pas. Le `downgrade` autogénéré laissait
+donc `applicationstatus` en place, et un nouvel `upgrade` échouait (« le type existe
+déjà »). Correctif : `op.execute("DROP TYPE applicationstatus")` à la fin de `downgrade()`.
+
+## 31. Tests de garde pour les migrations
+
+- **`alembic check`** (via `command.check`) : échoue si les modèles ont changé sans
+  migration. Vérifié en ajoutant une colonne `salary` sans migration : le test échoue.
+- **Aller-retour** `upgrade -> downgrade -> upgrade` : prouve que le downgrade est
+  complet, y compris le type enum.
+- **Vérifier que les tests savent échouer** : on casse volontairement le code (retirer
+  `DROP TYPE`) et on constate que le test rouge apparaît. Un test jamais vu en échec
+  n'est pas une preuve.
+
+## 32. Robustesse : repartir d'un état propre
+
+Mon essai de casse volontaire a laissé un type enum orphelin dans la base de test, et
+toute la suite échouait ensuite. La fixture vide maintenant le schéma au démarrage
+(`DROP SCHEMA public CASCADE`), ce qui est acceptable uniquement parce que le verrou
+garantit qu'il s'agit de la base de test.
+
 ---
 
 ## Prochaines notions
 
-- Migrations (Alembic) : historique versionné des changements de schéma.
+- Pagination et filtres sur `GET /applications` (statut, recherche).
+- Extraction d'offres d'emploi par LLM (partie « IA » du projet).

@@ -198,9 +198,56 @@ aussi `404` : l'application parente n'existe pas.
 **Réponse modèle.** `204 No Content` signifie « c'est fait, et je n'ai rien à renvoyer ».
 Après une suppression, il n'y a plus de ressource à décrire.
 
-### À compléter pendant l'étape B
+### À quoi servent les migrations (Alembic) ? Pourquoi pas `create_all` ?
 
-- À quoi servent les migrations (Alembic) ? *(à répondre quand Alembic sera en place)*
+**Réponse modèle.** `create_all` crée les tables qui n'existent pas, mais ne sait pas
+modifier une table existante : ajouter une colonne ou changer un type sans perdre les
+données est impossible. Une migration est un script versionné avec un `upgrade` et un
+`downgrade`. La base garde la version courante dans la table `alembic_version`. Je peux
+donc faire évoluer le schéma proprement, le reproduire sur n'importe quelle machine
+(développement, test, production) et revenir en arrière. C'est comme Git, mais pour le
+schéma.
+
+**Inconvénient à admettre.** Une étape de plus à maintenir, et l'autogénération n'est
+pas parfaite : il faut relire chaque migration.
+
+### Que fait `alembic revision --autogenerate` ? Peut-on lui faire confiance ?
+
+**Réponse modèle.** Il compare les modèles SQLAlchemy (`Base.metadata`) à l'état réel de
+la base et écrit le script des différences. On ne peut pas lui faire aveuglément
+confiance. Dans mon projet, le `downgrade` généré supprimait les tables mais pas le
+type enum PostgreSQL `applicationstatus` : un nouvel `upgrade` aurait échoué. Je l'ai
+détecté en relisant la migration et corrigé avec `DROP TYPE`. Il ne détecte pas non plus
+certains changements (renommage de colonne vu comme suppression puis ajout).
+
+### Comment t'assures-tu qu'un modèle modifié ne reste pas sans migration ?
+
+**Réponse modèle.** Un test lance `alembic check`, qui compare les modèles au schéma
+produit par les migrations et échoue s'il y a une différence. J'ai vérifié qu'il
+fonctionne en ajoutant volontairement une colonne au modèle sans migration : le test est
+devenu rouge. Ainsi l'oubli est détecté en CI avant d'arriver en production.
+
+### Comment testes-tu une migration ?
+
+**Réponse modèle.** Deux choses. D'abord, toute la suite construit son schéma avec les
+vraies migrations, donc `upgrade` est testé à chaque exécution et `downgrade` à la
+fin. Ensuite, un test fait `upgrade -> downgrade -> upgrade` et vérifie qu'après le
+`downgrade` il ne reste ni tables ni type enum, puis que le deuxième `upgrade` recrée
+tout.
+
+### Comment Alembic se connecte-t-il à la base sans mettre le mot de passe dans un fichier ?
+
+**Réponse modèle.** `alembic.ini` ne contient aucune URL. `alembic/env.py` appelle la même
+configuration que l'application (`get_settings()`), qui lit `DATABASE_URL` dans `.env`
+(ignoré par Git). Les tests, eux, fournissent leur propre connexion à la base de test,
+donc les migrations de test ne peuvent pas toucher la base de développement.
+
+### Peut-on modifier une migration déjà appliquée ?
+
+**Réponse modèle.** Non. Une fois appliquée sur une base (surtout partagée ou en
+production), on la considère comme de l'historique : on crée une nouvelle migration qui
+corrige. Modifier l'ancienne ferait diverger les bases qui l'ont déjà exécutée.
+Exception : tant qu'elle n'a été appliquée que sur ma machine, je peux la corriger.
 
 ---
 

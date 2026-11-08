@@ -46,5 +46,5 @@ tests qui ne dépendent pas les uns des autres.
   ne doit supposer un `id` précis.
 - (−) Le verrou vérifie le nom de la base, pas son contenu. En entreprise, on
   ajouterait un utilisateur PostgreSQL limité à la base de test.
-- (−) Les tables sont créées par `create_all` ; quand Alembic sera en place, il
-  faudra utiliser les migrations pour que les tests aient le même schéma que la production.
+- (−) Les tables étaient d'abord créées par `create_all`. **Mis à jour dans
+  l'ADR 004** : les tests utilisent maintenant les migrations Alembic.
