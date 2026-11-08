@@ -113,11 +113,66 @@ connecter au mauvais endroit en silence.
 puis remet tout comme avant. Les tests ne dépendent donc ni de mon vrai `.env`
 ni de mon mot de passe.
 
+## 13. ORM et modèles SQLAlchemy
+
+**Idée simple.** Un ORM (Object-Relational Mapper) est un traducteur : une classe Python
+= une table, un objet = une ligne, un attribut = une colonne. On manipule des objets
+au lieu d'écrire du SQL à la main.
+
+**Dans le projet.** `Application` (table `applications`) et `Contact` (table `contacts`)
+dans `app/models.py`. Les deux héritent de `Base` (`app/database.py`), ce qui permet à
+SQLAlchemy de les retrouver toutes.
+
+## 14. Clé primaire, clé étrangère et relation un-à-plusieurs
+
+- **Clé primaire** (`id`) : identifie chaque ligne de façon unique.
+- **Clé étrangère** (`Contact.application_id`) : colonne qui pointe vers l'`id` d'une
+  autre table. Elle crée le lien « ce contact appartient à cette candidature ».
+- **Un-à-plusieurs** : une candidature, plusieurs contacts. `relationship` permet
+  d'écrire `application.contacts` au lieu de faire la jointure soi-même.
+
+**Analogie.** Une fiche de candidature avec des post-it de contacts collés dessus :
+chaque post-it porte le numéro de la fiche.
+
+## 15. Cascade `delete-orphan`
+
+`cascade="all, delete-orphan"` règle le sort des contacts quand leur candidature change :
+- supprimer la candidature supprime ses contacts ;
+- retirer un contact de `application.contacts` le supprime de la base (plus d'« orphelin »).
+
+Cela garde la base cohérente (intégrité référentielle) sans suppressions manuelles.
+
+## 16. Enum
+
+**Idée simple.** Un ensemble fermé de valeurs autorisées (`APPLIED`, `INTERVIEW`,
+`OFFER`, `REJECTED`). Une valeur hors liste est refusée, donc pas de faute de frappe
+silencieuse. Coût : ajouter une valeur demande une migration.
+
+## 17. Donnée déduite plutôt que stockée
+
+**Idée simple.** Si une information se calcule à partir d'autres, on ne la stocke pas :
+deux copies finissent par se contredire.
+
+**Dans le projet.** `Contact.state` est une propriété Python calculée à partir de
+`contacted_at` et `replied_at`. Elle ne peut jamais être incohérente avec les dates.
+Contrepartie : on ne peut pas filtrer dessus directement en SQL.
+
+## 18. `server_default` : la base remplit la valeur
+
+`created_at` utilise `server_default=func.now()` : c'est PostgreSQL qui écrit la date
+à l'insertion. Elle est fiable et ne dépend ni du client ni de l'horloge de la machine
+qui exécute le code. `DateTime(timezone=True)` stocke aussi le fuseau horaire.
+
+## 19. Tester avec une base SQLite en mémoire
+
+Les tests de `test_models.py` utilisent SQLite en mémoire : rapide, sans serveur,
+et recréée à vide à chaque test. On vérifie les modèles sans toucher à PostgreSQL.
+Limite : SQLite n'est pas PostgreSQL, certains détails (types, fuseaux) diffèrent.
+
 ---
 
-## Prochaines notions (étape B : base de données)
+## Prochaines notions
 
-- ORM (SQLAlchemy) : traduit des objets Python en lignes de table.
-- Deux modèles distincts : modèle Pydantic (ce que l'API accepte) et modèle SQLAlchemy (la table).
 - Injection de dépendances de FastAPI (`Depends`) pour fournir une session de base de données.
+- Deux modèles distincts : modèle Pydantic (ce que l'API accepte) et modèle SQLAlchemy (la table).
 - Migrations (Alembic) : historique versionné des changements de schéma.
