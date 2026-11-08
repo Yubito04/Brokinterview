@@ -169,10 +169,74 @@ Les tests de `test_models.py` utilisent SQLite en mémoire : rapide, sans serveu
 et recréée à vide à chaque test. On vérifie les modèles sans toucher à PostgreSQL.
 Limite : SQLite n'est pas PostgreSQL, certains détails (types, fuseaux) diffèrent.
 
+## 20. Session SQLAlchemy et injection de dépendances (`Depends`)
+
+**Idée simple.** Une session est une « conversation » avec la base : on y ajoute des objets
+puis on les enregistre avec `commit`. Chaque requête HTTP a sa propre session.
+
+**Injection de dépendances.** La route déclare ce dont elle a besoin, FastAPI le fournit :
+```python
+def list_applications(session: Session = Depends(get_session)):
+```
+`get_session` utilise `yield` : la session est donnée à la route, puis fermée
+proprement quand la réponse est partie. Analogie : au restaurant, tu ne vas pas chercher
+ta vaisselle en cuisine, le serveur te l'apporte et la reprend.
+
+**Moteur vs session.** Un seul moteur pour toute l'application (`lru_cache`), car il gère
+un pool de connexions coûteux à créer ; une session par requête, car elle garde un état.
+
+## 21. Deux familles de modèles : schémas Pydantic et modèles SQLAlchemy
+
+- **SQLAlchemy** (`models.py`) = la table, comment c'est stocké.
+- **Pydantic** (`schemas.py`) = le contrat de l'API : `ApplicationCreate` (ce que le client
+  envoie), `ApplicationRead` (ce qu'il reçoit, avec `id` et `created_at`).
+
+`from_attributes=True` permet à Pydantic de lire directement un objet SQLAlchemy.
+Analogie : le formulaire papier du guichet n'est pas le classeur d'archives.
+
+## 22. PATCH et la règle du `null`
+
+`PATCH` modifie seulement les champs envoyés. Avec `model_dump(exclude_unset=True)`, on
+distingue un champ **absent** (ne pas toucher) d'un champ **`null`** (valeur explicite).
+Règle du projet : `null` sur un champ obligatoire donne `422` ; `null` sur un champ
+facultatif l'efface.
+
+## 23. Codes 404 et 422, et 204
+
+- `422` : la requête est invalide (champ manquant, statut inconnu).
+- `404` : la requête est valide, mais la ressource n'existe pas.
+- `204 No Content` : suppression réussie, rien à renvoyer.
+
+## 24. Config robuste : chemin du `.env` et clés inconnues
+
+`Path(__file__)` donne l'emplacement du fichier de code : le `.env` est trouvé quel que
+soit le dossier de lancement. Pydantic refuse les clés inconnues du `.env` : il faut
+déclarer chaque variable dans `Settings` (ici `test_database_url`, optionnelle).
+
+## 25. Isoler les tests : transaction annulée et savepoint
+
+**Idée simple.** Chaque test travaille sur un « calque transparent » qu'on jette à la fin.
+- Une **transaction** regroupe des opérations « tout ou rien » ; `rollback` les annule.
+- Un **savepoint** est un point de sauvegarde à l'intérieur d'une transaction. Avec
+  `join_transaction_mode="create_savepoint"`, le `commit()` d'une route ne valide que ce
+  point : la transaction externe, annulée à la fin du test, efface tout.
+- Les tables sont créées une seule fois par session de tests (c'est lent).
+
+## 26. Garde-fou pour les tests destructifs
+
+Les tests suppriment des tables à la fin. Un verrou (`tests/db_safety.py`), appelé dans
+`pytest_sessionstart` avant tout test, arrête la suite si la base de test est absente,
+ne finit pas par `_test`, ou est la même que celle de développement. Il est lui-même testé.
+Principe : transformer une erreur coûteuse en simple message d'arrêt.
+
+## 27. Utiliser un port différent sous Windows
+
+L'erreur `10013` au démarrage d'uvicorn sur le port 8000 vient de Windows qui refuse
+l'accès à ce port (souvent une plage réservée par le système). On choisit simplement
+un autre port libre, ici 8765 (`--port 8765`).
+
 ---
 
 ## Prochaines notions
 
-- Injection de dépendances de FastAPI (`Depends`) pour fournir une session de base de données.
-- Deux modèles distincts : modèle Pydantic (ce que l'API accepte) et modèle SQLAlchemy (la table).
 - Migrations (Alembic) : historique versionné des changements de schéma.
