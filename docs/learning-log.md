@@ -282,9 +282,45 @@ toute la suite échouait ensuite. La fixture vide maintenant le schéma au déma
 (`DROP SCHEMA public CASCADE`), ce qui est acceptable uniquement parce que le verrou
 garantit qu'il s'agit de la base de test.
 
+## 33. Pagination avec `limit` et `offset`
+
+**Idée simple.** Un classeur de 250 fiches : « donne-moi 20 fiches en sautant les 40
+premières » (`?limit=20&offset=40`). L'API ne renvoie jamais tout d'un coup.
+
+- La réponse est une **enveloppe** : `{"items": [...], "total": 137, "limit": 20, "offset": 40}`.
+  Le `total` (un `COUNT` avec les mêmes filtres) permet d'afficher « page 3 sur 7 ».
+- Limite : un grand `offset` est lent, et des lignes ajoutées pendant la navigation décalent
+  les pages. La solution pour de gros volumes est le **curseur** (`after_id`).
+
+## 34. Valider les paramètres de requête
+
+`Query(20, ge=1, le=100)` demande à FastAPI de vérifier que `limit` est un entier entre 1 et
+100 avant d'exécuter la fonction. Sinon : `422`. Un maximum est indispensable : sans lui,
+`limit=1000000` annulerait l'intérêt de la pagination. Un paramètre typé avec l'enum
+(`status: ApplicationStatus | None`) rejette automatiquement une valeur inconnue.
+
+## 35. Tri stable
+
+Quand plusieurs lignes ont la même date, SQL ne garantit aucun ordre entre elles. Avec la
+pagination, deux pages peuvent alors se chevaucher. Solution : ajouter un critère unique en
+second (`ORDER BY created_at DESC, id DESC`). Détail : dans un test, `now()` de PostgreSQL
+est l'heure de début de la **transaction**, donc toutes les lignes d'un test ont la même date.
+
+## 36. `LIKE`, jokers et injection SQL : deux protections différentes
+
+- **Requête paramétrée** : le texte de l'utilisateur est une *donnée*, jamais du *code SQL*.
+  Elle empêche l'injection (`'; DROP TABLE …`).
+- **Échappement des jokers** : dans un motif `LIKE`, `%` = « n'importe quoi » et `_` = « un
+  caractère ». Ce sont des motifs *à l'intérieur de la donnée*, que la requête paramétrée
+  ne touche pas. On les échappe (`\%`, `\_`, `\\`) pour chercher le texte littéralement.
+
+Analogie : le vigile à l'entrée vérifie que personne n'entre avec une arme (paramètres) ;
+cela ne t'empêche pas, dans la salle, de prendre un mot pour un autre (jokers).
+Autre limite : `ILIKE '%x%'` ne peut pas utiliser un index classique (voir `pg_trgm`).
+
 ---
 
 ## Prochaines notions
 
-- Pagination et filtres sur `GET /applications` (statut, recherche).
 - Extraction d'offres d'emploi par LLM (partie « IA » du projet).
+- Frontend React + TypeScript.

@@ -86,7 +86,7 @@ One application has many contacts; deleting an application deletes its contacts.
 |--------|----------------------------------------|----------------------------------------------|
 | GET    | `/health`                              | Health check                                 |
 | POST   | `/applications`                        | Create an application (201)                  |
-| GET    | `/applications`                        | List applications                            |
+| GET    | `/applications`                        | List applications (paginated, see below)     |
 | GET    | `/applications/{id}`                   | Read one application (404 if unknown)        |
 | PATCH  | `/applications/{id}`                   | Partial update                               |
 | DELETE | `/applications/{id}`                   | Delete it and its contacts (204)             |
@@ -94,6 +94,26 @@ One application has many contacts; deleting an application deletes its contacts.
 | GET    | `/applications/{id}/contacts`          | List the contacts of an application          |
 | PATCH  | `/contacts/{id}`                       | Partial update of a contact                  |
 | DELETE | `/contacts/{id}`                       | Delete a contact (204)                       |
+
+**Listing.** `GET /applications` accepts these query parameters:
+
+| Parameter | Default | Rule |
+|-----------|---------|------|
+| `limit`   | 20      | 1 to 100, otherwise 422 |
+| `offset`  | 0       | 0 or more, otherwise 422 |
+| `status`  | none    | one of `APPLIED`, `INTERVIEW`, `OFFER`, `REJECTED`, otherwise 422 |
+| `q`       | none    | text searched (case-insensitive) in company or position, max 200 characters; blank is ignored |
+
+Results are sorted newest first (`created_at`, then `id`, both descending), so pages never
+overlap. The response is an envelope:
+
+```json
+{ "items": [ { "id": 7, "company": "Acme", "position": "Backend Developer",
+               "status": "APPLIED", "created_at": "2026-11-08T14:00:43-05:00" } ],
+  "total": 137, "limit": 20, "offset": 0 }
+```
+
+`total` counts all rows matching the filters, not only the rows of the page.
 
 **PATCH rule.** A field left out is not changed. `null` on a required field
 (`company`, `position`, `status`, contact `name`) returns 422. `null` on an optional
