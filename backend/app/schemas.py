@@ -45,6 +45,14 @@ class ApplicationRead(BaseModel):
     created_at: datetime
 
 
+class ApplicationPage(BaseModel):
+    # One page of results, plus what the client needs to build the navigation.
+    items: list[ApplicationRead]
+    total: int
+    limit: int
+    offset: int
+
+
 class ContactCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     contacted_at: datetime | None = None
