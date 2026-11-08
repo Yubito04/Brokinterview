@@ -1,4 +1,9 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# backend/.env, found from this file's location, not from where the command is run.
+ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 
 
 class Settings(BaseSettings):
@@ -6,7 +11,10 @@ class Settings(BaseSettings):
     # address is missing, rather than silently connect to the wrong place.
     database_url: str
 
-    model_config = SettingsConfigDict(env_file=".env")
+    # Only the tests use this one. It is optional so the app runs without it.
+    test_database_url: str | None = None
+
+    model_config = SettingsConfigDict(env_file=ENV_FILE)
 
 
 def get_settings() -> Settings:
