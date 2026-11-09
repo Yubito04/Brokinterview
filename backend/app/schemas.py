@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -20,6 +20,8 @@ class ApplicationCreate(BaseModel):
     company: str = Field(min_length=1, max_length=200)
     position: str = Field(min_length=1, max_length=200)
     status: ApplicationStatus = ApplicationStatus.APPLIED
+    location: str | None = Field(default=None, min_length=1, max_length=200)
+    deadline: date | None = None
 
 
 class ApplicationUpdate(BaseModel):
@@ -27,9 +29,12 @@ class ApplicationUpdate(BaseModel):
     company: str | None = Field(default=None, min_length=1, max_length=200)
     position: str | None = Field(default=None, min_length=1, max_length=200)
     status: ApplicationStatus | None = None
+    location: str | None = Field(default=None, min_length=1, max_length=200)
+    deadline: date | None = None
 
     @model_validator(mode="after")
     def check_required_fields(self):
+        # location and deadline are optional: null clears them.
         reject_null_fields(self, "company", "position", "status")
         return self
 
@@ -42,6 +47,8 @@ class ApplicationRead(BaseModel):
     company: str
     position: str
     status: ApplicationStatus
+    location: str | None
+    deadline: date | None
     created_at: datetime
 
 

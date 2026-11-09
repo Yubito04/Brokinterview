@@ -1,7 +1,7 @@
 import enum
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, func
+from sqlalchemy import Date, DateTime, Enum, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -23,6 +23,10 @@ class Application(Base):
     status: Mapped[ApplicationStatus] = mapped_column(
         Enum(ApplicationStatus), default=ApplicationStatus.APPLIED
     )
+    # Optional, and nullable in the database: rows created before these columns
+    # existed have no value for them (see the second migration).
+    location: Mapped[str | None] = mapped_column(String(200))
+    deadline: Mapped[date | None] = mapped_column(Date)
     # The database fills this itself, so the date is the same whatever the client sends.
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
