@@ -49,6 +49,29 @@ def test_create_too_long_company_returns_422(client):
     assert create_application(client, company="x" * 201).status_code == 422
 
 
+def test_create_without_location_and_deadline_gives_null(client):
+    body = create_application(client).json()
+
+    assert body["location"] is None
+    assert body["deadline"] is None
+
+
+def test_create_keeps_location_and_deadline(client):
+    body = create_application(client, location="Montreal", deadline="2026-12-15").json()
+
+    assert body["location"] == "Montreal"
+    assert body["deadline"] == "2026-12-15"
+
+
+def test_create_invalid_deadline_returns_422(client):
+    assert create_application(client, deadline="not-a-date").status_code == 422
+
+
+def test_create_empty_or_too_long_location_returns_422(client):
+    assert create_application(client, location="").status_code == 422
+    assert create_application(client, location="x" * 201).status_code == 422
+
+
 def test_client_cannot_choose_the_id(client):
     first = create_application(client).json()
 
@@ -164,3 +187,37 @@ def test_delete_returns_204_then_application_is_gone(client):
 
 def test_delete_unknown_id_returns_404(client):
     assert client.delete("/applications/999999").status_code == 404
+
+
+def test_patch_sets_location_and_deadline(client):
+    created = create_application(client).json()
+
+    response = client.patch(
+        f"/applications/{created['id']}",
+        json={"location": "Remote", "deadline": "2027-01-31"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["location"] == "Remote"
+    assert response.json()["deadline"] == "2027-01-31"
+    assert response.json()["company"] == "Acme"
+
+
+def test_patch_null_clears_location_and_deadline(client):
+    created = create_application(client, location="Remote", deadline="2027-01-31").json()
+
+    response = client.patch(
+        f"/applications/{created['id']}", json={"location": None, "deadline": None}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["location"] is None
+    assert response.json()["deadline"] is None
+
+
+def test_patch_leaving_location_out_keeps_it(client):
+    created = create_application(client, location="Remote").json()
+
+    response = client.patch(f"/applications/{created['id']}", json={"status": "OFFER"})
+
+    assert response.json()["location"] == "Remote"

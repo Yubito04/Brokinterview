@@ -33,3 +33,15 @@ def downgrade_to_base(engine) -> None:
     with engine.connect() as connection:
         command.downgrade(alembic_config(connection), "base")
         connection.commit()
+
+
+def upgrade_to(engine, revision: str) -> None:
+    with engine.connect() as connection:
+        command.upgrade(alembic_config(connection), revision)
+        connection.commit()
+
+
+def downgrade_to(engine, revision: str) -> None:
+    with engine.connect() as connection:
+        command.downgrade(alembic_config(connection), revision)
+        connection.commit()
