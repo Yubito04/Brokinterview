@@ -1,0 +1,135 @@
+import json
+from datetime import date
+
+import anthropic
+import httpx2
+import pytest
+
+from app.llm import (
+    SYSTEM_PROMPT,
+    AnthropicJobExtractor,
+    ExtractedJob,
+    ExtractionFailed,
+)
+
+TOKEN_USAGE = {"input_tokens": 10, "output_tokens": 10}
+
+
+def message_json(text: str, stop_reason: str = "end_turn") -> dict:
+    return {
+        "id": "msg_test",
+        "type": "message",
+        "role": "assistant",
+        "model": "claude-haiku-5-5",
+        "content": [{"type": "text", "text": text}],
+        "stop_reason": stop_reason,
+        "stop_sequence": None,
+        "usage": TOKEN_USAGE,
+    }
+
+
+def build_extractor(handler) -> AnthropicJobExtractor:
+    # The real SDK, but its HTTP layer is replaced: no network, no cost, and we can
+    # inspect exactly what would have been sent to Anthropic.
+    http_client = httpx2.Client(transport=httpx2.MockTransport(handler))
+    client = anthropic.Anthropic(api_key="test-key", http_client=http_client, max_retries=0)
+    return AnthropicJobExtractor(client, "claude-haiku-5-5")
+
+
+ANSWER = {
+    "company": "Acme",
+    "position": "Backend Developer",
+    "location": None,
+    "deadline": "2026-12-01",
+    "skills": ["Python"],
+}
+
+
+def test_request_sent_to_the_model():
+    sent = {}
+
+    def handler(request):
+        sent.update(json.loads(request.content))
+        return httpx2.Response(200, json=message_json(json.dumps(ANSWER)))
+
+    extractor = build_extractor(handler)
+    extractor.extract("We hire a developer", date(2026, 11, 9))
+
+    assert sent["model"] == "claude-haiku-5-5"
+    assert sent["output_config"]["effort"] == "low"
+    assert "tools" not in sent  # the model can only answer, never act
+    assert sent["system"] == SYSTEM_PROMPT
+    # The answer must follow the ExtractedJob schema.
+    schema = sent["output_config"]["format"]["schema"]
+    assert set(schema["properties"]) == set(ExtractedJob.model_fields)
+
+
+def test_user_message_has_todays_date_and_the_posting_between_tags():
+    sent = {}
+
+    def handler(request):
+        sent.update(json.loads(request.content))
+        return httpx2.Response(200, json=message_json(json.dumps(ANSWER)))
+
+    build_extractor(handler).extract("We hire a developer", date(2026, 11, 9))
+
+    [message] = sent["messages"]
+    assert message["role"] == "user"
+    assert message["content"] == (
+        "Today's date: 2026-11-09\n\n<job_posting>\nWe hire a developer\n</job_posting>"
+    )
+
+
+def test_answer_is_parsed_into_extracted_job():
+    extractor = build_extractor(
+        lambda request: httpx2.Response(200, json=message_json(json.dumps(ANSWER)))
+    )
+
+    result = extractor.extract("text", date(2026, 11, 9))
+
+    assert result == ExtractedJob(
+        company="Acme",
+        position="Backend Developer",
+        location=None,
+        deadline=date(2026, 12, 1),
+        skills=["Python"],
+    )
+
+
+@pytest.mark.parametrize("status", [401, 429, 500, 529])
+def test_api_errors_become_extraction_failed(status):
+    error_body = {"type": "error", "error": {"type": "api_error", "message": "boom"}}
+    extractor = build_extractor(lambda request: httpx2.Response(status, json=error_body))
+
+    with pytest.raises(ExtractionFailed):
+        extractor.extract("text", date(2026, 11, 9))
+
+
+def test_network_error_becomes_extraction_failed():
+    def handler(request):
+        raise httpx2.ConnectError("network down")
+
+    with pytest.raises(ExtractionFailed):
+        build_extractor(handler).extract("text", date(2026, 11, 9))
+
+
+@pytest.mark.parametrize("stop_reason", ["refusal", "max_tokens"])
+def test_unusable_stop_reasons_become_extraction_failed(stop_reason):
+    extractor = build_extractor(
+        lambda request: httpx2.Response(
+            200, json=message_json(json.dumps(ANSWER), stop_reason=stop_reason)
+        )
+    )
+
+    with pytest.raises(ExtractionFailed):
+        extractor.extract("text", date(2026, 11, 9))
+
+
+def test_answer_that_breaks_the_schema_becomes_extraction_failed():
+    # Missing fields: the structured output was not respected.
+    extractor = build_extractor(
+        lambda request: httpx2.Response(200, json=message_json('{"company": "Acme"}'))
+    )
+
+    with pytest.raises(ExtractionFailed):
+        extractor.extract("text", date(2026, 11, 9))
