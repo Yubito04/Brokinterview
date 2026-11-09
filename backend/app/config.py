@@ -14,6 +14,14 @@ class Settings(BaseSettings):
     # Only the tests use this one. It is optional so the app runs without it.
     test_database_url: str | None = None
 
+    # Optional: without a key the app still runs, only the AI extraction
+    # endpoint answers 503. pydantic-settings does not copy .env values into
+    # os.environ, so this key is passed explicitly to the Anthropic client.
+    anthropic_api_key: str | None = None
+
+    # Cheap model on purpose: extracting fields from a short text is easy work.
+    anthropic_model: str = "claude-haiku-5-5"
+
     model_config = SettingsConfigDict(env_file=ENV_FILE)
 
 
