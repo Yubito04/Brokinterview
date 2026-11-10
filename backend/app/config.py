@@ -22,7 +22,16 @@ class Settings(BaseSettings):
     # Cheap model on purpose: extracting fields from a short text is easy work.
     anthropic_model: str = "claude-haiku-5-5"
 
+    # Web pages allowed to call this API from a browser (CORS), separated by commas.
+    # localhost and 127.0.0.1 are two different origins, so both are listed.
+    # Never "*": that would let any website read the API's answers.
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+
     model_config = SettingsConfigDict(env_file=ENV_FILE)
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
 
 def get_settings() -> Settings:

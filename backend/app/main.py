@@ -1,10 +1,20 @@
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.config import get_settings
 from app.llm import ExtractionFailed, ExtractionUnavailable
 from app.routers import applications, contacts, job_postings
 
 app = FastAPI(title="ApplyFlow AI")
+# CORS: tells the browser which web pages may read this API's answers.
+# No cookies are used, so credentials stay off.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=get_settings().cors_origin_list,
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_headers=["Content-Type"],
+)
 app.include_router(applications.router)
 app.include_router(contacts.router)
 app.include_router(job_postings.router)
