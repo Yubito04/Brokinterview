@@ -85,10 +85,17 @@ champs, ce qu'une expression régulière ferait mal car les offres n'ont aucun f
 
 Quatre vraies offres ont été envoyées à l'endpoint avec le vrai modèle (RBC, Nuovo
 Artistic Studios, deux textes d'Ericsson Canada). L'évaluation a été faite en comparant
-chaque réponse au texte source de l'offre. Aucune hallucination n'a été relevée : chaque
-valeur renvoyée figurait dans le texte, et les champs absents sont restés `null`.
+chaque réponse au texte source de l'offre.
 
-Trois constats :
+**Correction de l'évaluation initiale.** Elle concluait à l'absence d'hallucination. C'était
+inexact : pour le second texte d'Ericsson, la première réponse listait « Docker » dans
+`skills`, alors que ce mot n'apparaît pas dans l'offre (qui cite Kubernetes, Jenkins,
+Spinnaker, Groovy, Linux et Git). L'évaluation initiale ne l'avait pas relevé. Docker a
+disparu des réponses suivantes (une relance après les corrections, puis 3 relances) ; sa
+disparition est donc une correction, mais rien ne la garantit : c'est une limite du modèle,
+pas un bug corrigé. Les autres champs relevés étaient présents dans les textes.
+
+Constats de l'évaluation initiale :
 
 1. **RBC, deux dates.** Le texte donne une date (le 16) et une date officielle (le 17,
    avec fermeture la veille). Le modèle a retenu le 17. Ce choix est défendable mais il
@@ -96,11 +103,12 @@ Trois constats :
 2. **Nuovo, compétences mélangées.** `skills` contenait des compétences techniques (Python,
    Git) et des pratiques ou activités (revues de code, documentation, tests, design UI/UX).
    Cela rendait la liste peu utilisable.
-3. **Ericsson, `position` à `null` avec injection.** Un des deux textes d'Ericsson
-   contient une instruction piégée. Sur le texte sans injection, le modèle a trouvé
-   « Développeur de logiciels » ; sur le texte avec injection, `position` est resté `null`.
-   L'attaque a échoué (rien de ce que demandait l'instruction ne figure dans la réponse),
-   mais l'extraction a été dégradée.
+3. **Ericsson, `position` à `null`.** Sur un des textes, `position` est revenu à `null`
+   alors que l'autre texte donnait « Développeur de logiciels ». Ce constat avait d'abord
+   été rattaché à l'injection contenue dans l'un des deux textes. **Ce lien n'est pas
+   démontré** : le texte sans injection a lui aussi donné `position = null` à une relance
+   (voir « Variabilité »). Cause non établie : l'injection n'est pas écartée, mais rien ne
+   la prouve.
 
 ### Corrections apportées
 
@@ -116,15 +124,62 @@ Trois constats :
   peut échouer de temps en temps à cause du non-déterminisme du modèle : un échec doit être
   examiné avant d'être considéré comme un bug.
 
+### Variabilité mesurée
+
+Après les corrections, chaque offre a été envoyée 3 fois (modèle et prompt inchangés).
+
+| Champ | Nuovo | Ericsson (1) | Ericsson (2) | RBC |
+|---|---|---|---|---|
+| `company` | 3/3 | 3/3 | 3/3 | 3/3 |
+| `position` | 3/3 | 1/3 | 2/3 | 2/3 |
+| `location` | 3/3 | 3/3 | 3/3 | 3/3 |
+| `deadline` | 3/3 | 3/3 | 3/3 | 3/3 |
+| `skills` | 3/3 | 3/3 | 3/3 | 2/3 |
+
+Chiffres : nombre d'exécutions (sur 3) qui donnent la valeur la plus fréquente. Les
+différences sur `position` sont tantôt un `null`, tantôt une reformulation
+(« Développeur de logiciels » / « développeurs de logiciels »), tantôt un autre titre (RBC).
+Pour RBC, `UNIX/Linux` et `Windows` (présents dans le texte : « UNIX/Linux ou Windows »)
+manquent dans 1 exécution sur 3 : ils ne disparaissent donc pas systématiquement. Chaque
+compétence renvoyée figurait dans le texte (vérification automatique, sur les 3 exécutions).
+
+### Pas de réglage de la température
+
+L'appel au modèle ne définit pas de `temperature`. Elle ne peut pas être abaissée : le SDK
+installé (anthropic 2.6.0) n'a plus ce paramètre dans `messages.create()`, et l'API
+refuse la valeur envoyée à la main (`400 : temperature: Extra inputs are not permitted`,
+vérifié le 2026-11-10 avec `claude-haiku-5-5`). La variabilité se réduit autrement
+(prompt plus précis, validation, vérification humaine), pas par ce réglage.
+
 ### Limites connues, non corrigées
 
 - **Dates multiples** (RBC) : le modèle choisit une date, sans signaler l'ambiguïté. Le
   client doit vérifier la date avant de créer la candidature.
-- **Texte contenant une injection** (Ericsson) : une attaque qui échoue peut quand même
-  dégrader l'extraction (`position` à `null`). Les champs sont à vérifier, ce qui justifie
-  que l'endpoint ne sauvegarde rien.
-- **Variabilité** : après les corrections ci-dessus, une relance des quatre offres a
-  donné `position = null` pour le texte d'Ericsson sans injection, alors que la première
-  exécution avait trouvé « Développeur de logiciels ». Le même texte ne donne donc pas
-  toujours la même réponse : le constat 3 ne peut pas être attribué à la seule injection.
-- Quatre offres forment un échantillon trop petit pour mesurer un taux de réussite.
+- **`position` instable** : le même texte donne `null`, une reformulation ou un autre
+  titre d'une exécution à l'autre. Les champs sont à vérifier, ce qui justifie que
+  l'endpoint ne sauvegarde rien.
+- **Hallucination possible** : « Docker » a été inventé une fois. Un contrôle côté serveur
+  (rejeter une compétence absente du texte) n'existe pas.
+- **Injection** : une attaque peut échouer tout en dégradant l'extraction ; ce n'est pas
+  démontré ici (voir constat 3).
+- Quatre offres, trois passages chacune : échantillon trop petit pour mesurer un taux de
+  réussite.
+
+### Conclusion
+
+L'instabilité de `position` apparaît là où le texte source est ambigu. Les textes d'Ericsson
+n'ont aucun titre explicite (ils disent seulement « nous recherchons des développeurs de
+logiciels »), et celui de RBC en contient deux (« développeur, Marchés de capitaux,
+Services technologiques et quantitatifs » et « stagiaire des Services technologiques et
+quantitatifs »). Nuovo, dont le titre est clair (« Software Developer Intern »), est stable
+sur les 3 exécutions (et sur les 5 passages depuis le début). Quand le texte ne tranche pas,
+le modèle tranche différemment d'un appel à l'autre. Cette lecture colle aux 12 réponses
+observées, mais l'échantillon est trop petit pour en faire une règle.
+
+## Backlog
+
+- **Signaler les compétences introuvables dans le texte source.** Comparer chaque élément de
+  `skills` au texte de l'offre (par exemple une recherche insensible à la casse) et indiquer
+  dans la réponse ceux qui n'y figurent pas, pour aider la relecture. Cela aurait signalé
+  « Docker » dans l'évaluation initiale. Une comparaison littérale ratera les variantes
+  d'écriture (« UNIX/Linux » contre « Linux ») : elle sert à alerter, pas à rejeter.
