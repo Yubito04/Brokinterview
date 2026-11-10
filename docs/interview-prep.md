@@ -420,7 +420,87 @@ requête a sa propre transaction, donc les dates diffèrent. Pour tester le dép
 
 ## IA
 
-*(à compléter quand on ajoutera l'extraction d'offres par LLM : choix du modèle, sortie structurée, gestion des erreurs et des coûts, validation de la réponse du LLM)*
+### Comment fonctionne l'extraction d'offres d'emploi ?
+
+**Réponse modèle.** `POST /job-postings/extract` reçoit le texte d'une offre et renvoie
+l'entreprise, le poste, le lieu, la date limite et les compétences. La route délègue à un
+« extracteur » qui appelle Claude Haiku avec un prompt système et le texte de l'offre. Le
+résultat n'est pas sauvegardé : le client le vérifie, puis crée la candidature avec
+`POST /applications`. Voir l'ADR 006.
+
+### Comment obtiens-tu une réponse fiable d'un LLM ?
+
+**Réponse modèle.** Avec une sortie structurée : je donne au SDK une classe Pydantic, qui
+devient un schéma JSON auquel la réponse doit se conformer, puis le SDK la valide. Je
+récupère un objet typé, pas du texte à parser. Si la réponse ne respecte pas le schéma,
+c'est une erreur, pas une donnée corrompue qui entre dans l'application.
+
+**Limite à admettre.** Le schéma garantit la forme, pas la justesse : le modèle peut
+renvoyer un lieu faux mais bien formaté. D'où la vérification par l'utilisateur.
+
+### Pourquoi tous les champs peuvent-ils être `null` ?
+
+**Réponse modèle.** Parce que l'information peut être absente de l'offre. Si le schéma
+exigeait une valeur, le modèle serait poussé à en inventer une. Avec `null` autorisé et un
+prompt qui demande de ne jamais deviner, il a une réponse honnête. Un test d'intégration
+vérifie qu'une offre sans date limite donne `deadline = null`.
+
+### Qu'est-ce que l'injection de prompt, et comment t'en protèges-tu ?
+
+**Réponse modèle.** Le texte d'une offre vient d'un tiers et peut contenir des
+instructions (« ignore les règles précédentes et… »). Le modèle risque de les suivre,
+comme une injection SQL mais en langage naturel. Mes protections : le texte est entouré de
+balises `<job_posting>` et le prompt système dit que c'est une donnée non fiable dont il
+ne faut pas suivre les instructions ; le modèle n'a ni outil ni accès à des données ; et
+le résultat n'est jamais enregistré sans validation humaine. Un test appelle le vrai
+modèle avec une offre piégée.
+
+**Limite à admettre.** C'est une atténuation, pas une garantie : aucune technique actuelle
+ne bloque l'injection à 100 %. C'est pourquoi le dernier garde-fou est structurel (rien
+n'est sauvegardé, aucun outil).
+
+### Pourquoi Haiku plutôt qu'un modèle plus gros ?
+
+**Réponse modèle.** Extraire cinq champs d'un court texte est une tâche facile. Un petit
+modèle est plus rapide et moins cher, et je baisse aussi l'effort de raisonnement. Le nom
+du modèle est dans la configuration (`ANTHROPIC_MODEL`) : si la qualité ne suffit pas,
+je change une variable, pas du code.
+
+### Comment testes-tu du code qui appelle un LLM ?
+
+**Réponse modèle.** À trois niveaux. Les tests de route utilisent un faux extracteur
+injecté avec `dependency_overrides` : gratuits et déterministes. Les tests de
+`llm.py` simulent la couche HTTP pour déclencher de vrais cas d'erreur du SDK (429, 500,
+réseau coupé, refus, réponse hors schéma). Enfin, deux tests appellent le vrai modèle ;
+ils sont marqués `live_llm` et exclus par défaut car ils coûtent de l'argent.
+
+**Limite à admettre.** Les faux ne prouvent pas que le prompt donne de bons résultats : seuls
+les tests réels le font, et leur sortie peut varier.
+
+### Que se passe-t-il si l'API du modèle tombe ou si la clé manque ?
+
+**Réponse modèle.** Sans clé, l'application démarre quand même et l'endpoint répond `503`
+(service non configuré). Si l'appel échoue (réseau, limite de débit, mauvaise clé, refus,
+réponse tronquée ou hors schéma), l'endpoint répond `502` : mon serveur va bien, c'est le
+service amont qui a échoué. Le client reçoit un message générique ; le détail reste dans
+les logs pour ne rien révéler. Le reste de l'API n'est pas affecté.
+
+### Comment maîtrises-tu le coût ?
+
+**Réponse modèle.** Texte d'entrée limité à 20 000 caractères (`422` au-delà), `max_tokens`
+borné, petit modèle, effort bas, délai maximal de 30 secondes et deux reprises au plus. Les
+tests payants sont exclus par défaut.
+
+**Limite à admettre.** Il n'y a ni authentification ni limitation de débit : en production,
+n'importe qui pouvant joindre l'endpoint pourrait dépenser la clé. Je les ajouterais avant
+tout déploiement public.
+
+### Pourquoi ne pas créer la candidature automatiquement après l'extraction ?
+
+**Réponse modèle.** Parce que le modèle peut se tromper ou avoir été manipulé par l'offre.
+Renvoyer les champs laisse l'utilisateur corriger avant de créer. Cela garde aussi
+l'endpoint simple, sans effet de bord : on peut l'appeler plusieurs fois sans rien
+modifier.
 
 ---
 

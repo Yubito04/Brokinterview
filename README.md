@@ -74,7 +74,7 @@ upgrade, downgrade, upgrade works (including the PostgreSQL enum type).
 
 Defined in `backend/app/models.py` (SQLAlchemy):
 
-- `applications`: `id`, `company`, `position`, `status` (`APPLIED`, `INTERVIEW`, `OFFER`, `REJECTED`), `created_at`.
+- `applications`: `id`, `company`, `position`, `location` (optional), `deadline` (optional date), `status` (`APPLIED`, `INTERVIEW`, `OFFER`, `REJECTED`), `created_at`.
 - `contacts`: `id`, `application_id` (foreign key), `name`, `contacted_at`, `replied_at`, `created_at`.
   The contact state (`NOT_CONTACTED`, `WAITING`, `REPLIED`) is derived from the two dates, not stored.
 
@@ -94,6 +94,7 @@ One application has many contacts; deleting an application deletes its contacts.
 | GET    | `/applications/{id}/contacts`          | List the contacts of an application          |
 | PATCH  | `/contacts/{id}`                       | Partial update of a contact                  |
 | DELETE | `/contacts/{id}`                       | Delete a contact (204)                       |
+| POST   | `/job-postings/extract`                | Extract fields from a job posting with an LLM (nothing saved) |
 
 **Listing.** `GET /applications` accepts these query parameters:
 
@@ -118,6 +119,39 @@ overlap. The response is an envelope:
 **PATCH rule.** A field left out is not changed. `null` on a required field
 (`company`, `position`, `status`, contact `name`) returns 422. `null` on an optional
 field (`contacted_at`, `replied_at`) clears it.
+
+## AI extraction of job postings
+
+`POST /job-postings/extract` takes `{"text": "<job posting>"}` (1 to 20,000 characters) and
+returns the fields found by Claude Haiku. Nothing is saved: check the result, then create
+the application with `POST /applications`.
+
+```json
+{ "company": "Acme", "position": "Backend Developer", "location": "Montreal",
+  "deadline": "2026-12-15", "skills": ["Python", "PostgreSQL"] }
+```
+
+Every field can be `null` when the posting does not say. `skills` is returned but not
+stored (no column yet).
+
+| Status | Meaning |
+|--------|---------|
+| 422    | Text missing, blank or longer than 20,000 characters |
+| 502    | The model call failed or gave an unusable answer |
+| 503    | No `ANTHROPIC_API_KEY` configured |
+
+**Setup.** Create a key on console.anthropic.com and put it in `backend/.env`
+(`ANTHROPIC_API_KEY=...`). Without it the app runs and only this endpoint answers 503.
+The model is set by `ANTHROPIC_MODEL` (default `claude-haiku-5-5`). Each call costs money:
+there is no authentication or rate limit yet, so do not expose the API publicly.
+
+**Tests.** The default run uses a fake extractor and a mocked HTTP layer: no network, no
+cost. Two tests call the real model and run only on request:
+
+```powershell
+cd backend
+.venv\Scripts\python.exe -m pytest -m live_llm
+```
 
 ## Documentation
 

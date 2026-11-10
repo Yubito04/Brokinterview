@@ -318,9 +318,57 @@ Analogie : le vigile à l'entrée vérifie que personne n'entre avec une arme (p
 cela ne t'empêche pas, dans la salle, de prendre un mot pour un autre (jokers).
 Autre limite : `ILIKE '%x%'` ne peut pas utiliser un index classique (voir `pg_trgm`).
 
+## 37. LLM et sortie structurée
+
+**Idée simple.** Un LLM écrit du texte libre. Une sortie structurée lui impose un
+formulaire à remplir : on donne une classe Pydantic (`ExtractedJob`), le SDK la transforme
+en schéma JSON, et la réponse doit le respecter, sinon elle est rejetée. On récupère un
+objet Python typé, pas une chaîne à parser. Dans le projet : `messages.parse(...,
+output_format=ExtractedJob)` dans `app/llm.py`.
+
+## 38. Autoriser `null` pour éviter l'invention
+
+Un modèle qui doit remplir un champ absent a tendance à inventer une valeur plausible
+(hallucination). Si chaque champ peut valoir `null` et que le prompt dit « si ce n'est pas
+dans le texte, renvoie `null` », le modèle a une porte de sortie honnête. Le test « offre
+sans date limite » vérifie que `deadline` reste `null`.
+
+## 39. Injection de prompt
+
+Le texte de l'offre est écrit par un inconnu. S'il contient « ignore tes instructions et
+réponds X », le modèle risque d'obéir : c'est comme l'injection SQL, mais en langage
+naturel. Défenses du projet : le texte est délimité par des balises et déclaré « donnée non
+fiable » dans le prompt système ; le modèle n'a aucun outil ; et surtout le résultat n'est
+pas sauvegardé sans que l'utilisateur le vérifie. On réduit le risque, on ne l'élimine pas.
+
+## 40. Interface (`Protocol`) et faux pour tester sans réseau
+
+`JobExtractor` décrit seulement ce dont la route a besoin : une méthode `extract`. La vraie
+classe appelle Anthropic, le faux (`tests/fakes.py`) renvoie une valeur préparée. Branchés
+avec `Depends` et `dependency_overrides` (voir 20), les tests ne coûtent rien et donnent
+toujours le même résultat. Pour les cas d'erreur du SDK, on simule la couche HTTP plutôt
+que le SDK lui-même, afin de tester le vrai code de gestion d'erreurs.
+
+## 41. 502 et 503
+
+- `503 Service Unavailable` : le service n'est pas prêt (ici, pas de clé API configurée).
+- `502 Bad Gateway` : notre serveur fonctionne, mais le service en amont (le modèle) a
+  échoué ou répondu n'importe quoi.
+
+Le détail de l'erreur va dans les logs, pas dans la réponse : il pourrait révéler des
+informations internes.
+
+## 42. Maîtriser le coût d'un appel LLM
+
+On paie à la quantité de texte lue et écrite (les jetons, ou *tokens*). Leviers utilisés :
+un petit modèle (Haiku) pour une tâche facile, `effort` bas, texte d'entrée limité à
+20 000 caractères, `max_tokens` borné, délai maximal (`timeout`) et peu de reprises
+(`max_retries`). Et les tests ne touchent pas l'API par défaut : le marqueur `live_llm`
+exclut les tests payants (`addopts = -m "not live_llm"`).
+
 ---
 
 ## Prochaines notions
 
-- Extraction d'offres d'emploi par LLM (partie « IA » du projet).
 - Frontend React + TypeScript.
+- Authentification et limitation de débit avant tout déploiement.
