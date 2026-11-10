@@ -5,7 +5,7 @@ Job application tracker with LLM-based job posting extraction (work in progress)
 ## Stack
 
 - Backend: Python, FastAPI, Pydantic, SQLAlchemy, Alembic, PostgreSQL
-- Frontend: React + TypeScript (planned)
+- Frontend: React, TypeScript, Vite, Tailwind CSS (in progress: `frontend/`)
 - Tests: pytest
 
 ## Setup (Windows)
@@ -55,6 +55,19 @@ After changing a model in `app/models.py`, generate a migration, **read it**, th
 Autogenerate is not perfect (for example it does not drop PostgreSQL enum types in
 `downgrade`), so always review the generated file. The test suite fails if a model
 changed without a migration.
+
+## Run the frontend
+
+```powershell
+cd frontend
+npm install
+copy .env.example .env
+npm run dev
+```
+
+Open **http://localhost:5173** (not `127.0.0.1`: Vite listens on IPv6 `::1` here). The
+backend must be running. Details in [`frontend/README.md`](frontend/README.md) and
+[ADR 008](docs/adr/008-choix-techniques-du-frontend.md).
 
 ## CORS (browser access)
 

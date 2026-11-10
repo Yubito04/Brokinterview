@@ -379,9 +379,51 @@ envoyer la requête, mais ne lui remet la réponse que si l'API a signé un lais
 - CORS protège l'utilisateur du navigateur, pas l'API : `curl` n'est pas concerné. Ce n'est
   pas de l'authentification.
 
+## 44. `node_modules/`, `package.json` et `package-lock.json`
+
+`package.json` est la recette : les bibliothèques voulues, avec une plage de versions
+(`^19.3.1`). `node_modules/` contient les milliers de fichiers téléchargés : il se recrée avec
+`npm install`, donc il est ignoré par Git. `package-lock.json` est le ticket de caisse : la
+version exacte de chaque bibliothèque installée. On le versionne pour que chacun (et le
+serveur de déploiement) installe exactement les mêmes versions.
+
+## 45. Variables `VITE_` : publiques
+
+Vite remplace `import.meta.env.VITE_API_URL` par sa valeur à la compilation : elle est écrite
+dans le JavaScript que le navigateur télécharge, donc lisible par tous. Il n'expose que les
+variables qui commencent par `VITE_`. Règle : aucun secret (clé API, mot de passe, jeton) dans
+le frontend. Le secret reste dans le backend, qui l'utilise pour le compte du navigateur.
+
+## 46. `localhost`, IPv4 et IPv6
+
+`127.0.0.1` est « moi-même » en IPv4 ; `::1` est l'équivalent en IPv6. Le nom `localhost`
+peut mener à l'un ou à l'autre. Vite écoute sur `localhost`, ici `[::1]:5173` (vu avec
+`netstat -ano`) : `http://127.0.0.1:5173` donne `ERR_CONNECTION_REFUSED`, car rien n'écoute
+en IPv4. Le serveur n'est pas en panne : il écoute dans l'autre famille d'adresses. On utilise
+`http://localhost:5173`.
+
+## 47. Une erreur CORS est masquée au JavaScript
+
+Quand le navigateur bloque une réponse pour cause de CORS, le code JavaScript ne reçoit que
+`TypeError: Failed to fetch`, le même message qu'un backend éteint. Le navigateur cache la
+vraie cause exprès : il ne veut pas qu'une page malveillante puisse sonder ce que le serveur
+répond. Pour distinguer les deux cas, il faut ouvrir la **Console** des outils de développement
+(F12) : elle affiche « blocked by CORS policy… ». Vérifié en ouvrant l'application depuis le
+port 5174, une origine non autorisée.
+
+## 48. Premiers concepts React
+
+- **Composant** : une fonction qui renvoie ce qu'on affiche (`App`).
+- **JSX** : du HTML écrit dans le JavaScript ; `{...}` y insère du code.
+- **État (`useState`)** : la mémoire du composant ; le changer redessine l'écran. Un type
+  « union » (`loading` / `ok` / `error`) décrit les trois situations possibles.
+- **Effet (`useEffect`)** : du code exécuté après l'affichage ; avec `[]`, une seule fois.
+  C'est l'endroit pour appeler l'API.
+
 ---
 
 ## Prochaines notions
 
-- Frontend React + TypeScript.
+- Types de l'API générés depuis OpenAPI, et couche d'appels.
+- Liste paginée avec filtres (conversion page ↔ offset) et TanStack Query.
 - Authentification et limitation de débit avant tout déploiement.

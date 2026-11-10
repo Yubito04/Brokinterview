@@ -563,6 +563,38 @@ modifier.
 
 ---
 
+## Frontend
+
+### Pourquoi les variables `VITE_` sont-elles publiques ? Peux-tu mettre une clé API dans le frontend ?
+
+**Réponse modèle.** Vite recopie la valeur de `VITE_API_URL` dans le JavaScript compilé, que
+le navigateur télécharge : n'importe qui peut la lire avec les outils de développement. Il
+n'expose d'ailleurs que les variables préfixées `VITE_`, pour ne pas publier tout le `.env`.
+On ne met donc jamais de secret dans le frontend : ma clé Anthropic est dans `backend/.env`
+et seul le backend l'utilise.
+
+### Quelle différence entre `package.json` et `package-lock.json` ? Pourquoi versionner le second ?
+
+**Réponse modèle.** `package.json` déclare des plages de versions (`^19.3.1`) ;
+`package-lock.json` enregistre la version exacte installée de chaque bibliothèque et de ses
+dépendances. Sans lui, deux `npm install` à des dates différentes peuvent donner des versions
+différentes. `node_modules/` n'est pas versionné : il se reconstruit.
+
+### `localhost:5173` marche mais pas `127.0.0.1:5173` : pourquoi ?
+
+**Réponse modèle.** Vite écoute sur `localhost`, que Node résout ici en `::1` (IPv6). `netstat`
+montre `[::1]:5173`. `127.0.0.1` est de l'IPv4 et rien n'y écoute : connexion refusée.
+Ce n'est pas du CORS (la connexion n'arrive pas jusqu'au serveur).
+
+### Le frontend affiche « Failed to fetch » : CORS ou backend éteint ?
+
+**Réponse modèle.** Impossible à savoir depuis le JavaScript : le navigateur masque la cause
+d'une erreur CORS, pour ne pas révéler d'informations à une page non autorisée. On ouvre la
+Console (F12) : pour CORS, elle indique « blocked by CORS policy » ; pour un backend éteint,
+une erreur de connexion refusée dans l'onglet Réseau.
+
+---
+
 ## Déploiement
 
 *(à compléter plus tard : Docker, variables d'environnement en production, migrations au déploiement, CI)*
