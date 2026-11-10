@@ -495,6 +495,40 @@ tests payants sont exclus par défaut.
 n'importe qui pouvant joindre l'endpoint pourrait dépenser la clé. Je les ajouterais avant
 tout déploiement public.
 
+### Pourquoi tes tests réels vérifient-ils des fragments plutôt qu'une réponse exacte ?
+
+**Réponse modèle.** Un LLM n'est pas déterministe : deux appels identiques peuvent
+formuler « Montréal » et « Montreal, QC » différemment. Mes tests réels vérifient donc ce
+qui doit rester vrai (le nom contient « Northwind », la date est exactement 2026-12-15, les
+compétences contiennent Python, FastAPI et PostgreSQL) plutôt qu'une égalité complète. Pour
+l'offre piégée, ils vérifient l'inverse : l'entreprise n'est pas « HACKED » et le poste
+n'est pas « CEO ». Ils ont réussi sur le vrai modèle, en moins de 5 secondes.
+
+**Limite à admettre.** Deux cas ne prouvent pas la robustesse : c'est un test de fumée, pas
+une évaluation. Pour mesurer la qualité, il faudrait un jeu d'offres réelles avec les
+réponses attendues et un taux de réussite.
+
+### Pourquoi passer la clé API explicitement au client Anthropic ?
+
+**Réponse modèle.** Le SDK cherche la clé dans les variables d'environnement du système.
+Or pydantic-settings lit le fichier `.env` dans l'objet `Settings` sans copier ses valeurs
+dans l'environnement : le SDK ne la trouverait pas. Je lui passe donc
+`api_key=settings.anthropic_api_key`. Un bénéfice : la configuration reste au même endroit,
+et une variable d'environnement réelle prend toujours le dessus sur le `.env`, ce qui m'a
+servi pour vérifier que les tests normaux n'appellent pas l'API.
+
+### Ta route est une fonction `def`, pas `async def`, alors qu'elle appelle un service externe : pourquoi ?
+
+**Réponse modèle.** Le client Anthropic que j'utilise est synchrone : l'appel bloque
+pendant que le modèle répond. Dans une `async def`, ce blocage gèlerait toute la boucle
+d'événements et donc toutes les autres requêtes. FastAPI exécute les routes `def` dans un
+pool de threads, donc un appel lent n'en bloque pas d'autres. Si je voulais de l'`async`,
+j'utiliserais le client asynchrone du SDK (`AsyncAnthropic`) avec `await`.
+
+**Limite à admettre.** Le pool de threads est limité : beaucoup d'appels lents en parallèle
+finiraient par l'épuiser. Avec une charge élevée, l'`async` ou une file de tâches serait
+plus adapté.
+
 ### Pourquoi ne pas créer la candidature automatiquement après l'extraction ?
 
 **Réponse modèle.** Parce que le modèle peut se tromper ou avoir été manipulé par l'offre.
