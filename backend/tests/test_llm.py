@@ -96,6 +96,31 @@ def test_answer_is_parsed_into_extracted_job():
     )
 
 
+def test_answer_without_skills_gives_an_empty_list():
+    answer = {**ANSWER, "skills": []}
+    extractor = build_extractor(
+        lambda request: httpx2.Response(200, json=message_json(json.dumps(answer)))
+    )
+
+    assert extractor.extract("text", date(2026, 11, 9)).skills == []
+
+
+def test_null_skills_break_the_schema_and_become_extraction_failed():
+    # skills is a list that may be empty, never null: the model must follow that.
+    answer = {**ANSWER, "skills": None}
+    extractor = build_extractor(
+        lambda request: httpx2.Response(200, json=message_json(json.dumps(answer)))
+    )
+
+    with pytest.raises(ExtractionFailed):
+        extractor.extract("text", date(2026, 11, 9))
+
+
+def test_prompt_limits_skills_to_technical_ones_and_asks_for_an_empty_list():
+    assert "only technical skills" in SYSTEM_PROMPT
+    assert "empty list []" in SYSTEM_PROMPT
+
+
 @pytest.mark.parametrize("status", [401, 429, 500, 529])
 def test_api_errors_become_extraction_failed(status):
     error_body = {"type": "error", "error": {"type": "api_error", "message": "boom"}}

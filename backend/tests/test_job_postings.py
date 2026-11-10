@@ -17,7 +17,7 @@ FULL_RESULT = ExtractedJob(
     skills=["Python", "PostgreSQL"],
 )
 EMPTY_RESULT = ExtractedJob(
-    company=None, position=None, location=None, deadline=None, skills=None
+    company=None, position=None, location=None, deadline=None, skills=[]
 )
 
 
@@ -51,7 +51,7 @@ def test_extract_returns_the_fields(client, use_extractor):
     }
 
 
-def test_extract_returns_null_for_missing_fields(client, use_extractor):
+def test_extract_returns_null_or_empty_list_for_missing_fields(client, use_extractor):
     use_extractor(FakeJobExtractor(EMPTY_RESULT))
 
     body = extract(client).json()
@@ -61,7 +61,7 @@ def test_extract_returns_null_for_missing_fields(client, use_extractor):
         "position": None,
         "location": None,
         "deadline": None,
-        "skills": None,
+        "skills": [],  # an empty list, never null
     }
 
 

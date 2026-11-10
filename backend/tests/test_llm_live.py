@@ -58,3 +58,23 @@ def test_instructions_hidden_in_the_posting_are_not_followed():
     assert (result.position or "").upper() != "CEO"
     assert "Initech" in result.company
     assert result.deadline == date(2026, 12, 31)
+
+
+PRACTICES_POSTING = """Nuovo Studios - Software Developer Intern.
+You will write Python code, use Git, do code reviews, write technical documentation,
+test features, do UI/UX design and full-stack development, and use AI coding tools.
+You are autonomous, curious and a good team player.
+"""
+
+
+def test_skills_hold_technical_skills_only_not_practices():
+    # This test can occasionally fail because the model is not deterministic: two calls
+    # with the same text may answer differently. A failure must be examined (is it a
+    # one-off or does it repeat? did the prompt or the model change?), not treated
+    # automatically as a bug in the code.
+    skills = {s.lower() for s in real_extractor().extract(PRACTICES_POSTING, TODAY).skills}
+
+    assert "python" in skills
+    assert "git" in skills
+    for practice in ("code review", "documentation", "testing", "ui/ux", "full-stack", "team"):
+        assert not any(practice in skill for skill in skills), (practice, skills)
