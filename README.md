@@ -56,6 +56,13 @@ Autogenerate is not perfect (for example it does not drop PostgreSQL enum types 
 `downgrade`), so always review the generated file. The test suite fails if a model
 changed without a migration.
 
+## CORS (browser access)
+
+The frontend (Vite, `http://localhost:5173`) lives on another origin than the API, so the
+API must allow it. The allowed origins are set by `CORS_ORIGINS` in `backend/.env`
+(comma-separated). Default: `http://localhost:5173` and `http://127.0.0.1:5173` (two
+different origins). See [ADR 007](docs/adr/007-cors-pour-le-frontend.md).
+
 ## Run the tests
 
 ```powershell

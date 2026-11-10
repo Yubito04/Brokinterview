@@ -130,6 +130,31 @@ URLs interminables.
 **Alternative écartée.** `POST /contacts` avec `application_id` dans le corps : valide
 aussi, mais la relation est moins visible et il faut valider l'`id` à la main.
 
+### Qu'est-ce que le CORS et pourquoi en as-tu besoin ?
+
+**Réponse modèle.** Le navigateur applique la règle de même origine : une page chargée
+depuis `localhost:5173` ne peut pas lire la réponse d'une API sur `127.0.0.1:8765`, car le
+port et l'hôte diffèrent. Le CORS est le mécanisme par lequel le serveur autorise des
+origines précises, avec l'en-tête `Access-Control-Allow-Origin`. Pour les requêtes `PATCH`,
+`DELETE` ou en JSON, le navigateur envoie d'abord un `OPTIONS` (preflight). J'ai ajouté le
+`CORSMiddleware` de FastAPI avec une liste d'origines lue dans `.env` (ADR 007).
+
+**Limite à admettre.** CORS protège l'utilisateur d'un navigateur, pas l'API : n'importe
+quel script peut l'appeler. L'authentification reste nécessaire.
+
+### Pourquoi listes-tu `localhost` et `127.0.0.1` séparément, et pas `*` ?
+
+**Réponse modèle.** Ce sont deux noms d'hôte, donc deux origines pour le navigateur : si je
+n'en autorise qu'une, la page ouverte avec l'autre échoue. Quant à `*`, il autoriserait
+n'importe quel site à lire les réponses de l'API depuis le navigateur d'un utilisateur ; je
+liste donc les origines précises.
+
+### Pourquoi un proxy Vite n'est-il pas ma solution ?
+
+**Réponse modèle.** Le proxy cache le problème en développement (une seule origine), mais il
+n'existe pas en production : j'y découvrirais le CORS au déploiement. Avec le middleware, je
+teste en développement ce qui tournera en production.
+
 ### Pourquoi un endpoint `/health` ?
 
 **Réponse modèle.** C'est un endpoint de supervision : Docker, un load balancer

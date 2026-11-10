@@ -366,6 +366,19 @@ un petit modèle (Haiku) pour une tâche facile, `effort` bas, texte d'entrée l
 (`max_retries`). Et les tests ne touchent pas l'API par défaut : le marqueur `live_llm`
 exclut les tests payants (`addopts = -m "not live_llm"`).
 
+## 43. Origine, CORS et preflight
+
+**Idée simple.** Une origine, c'est protocole + hôte + port. `http://localhost:5173` et
+`http://127.0.0.1:8765` sont deux origines. Le navigateur est un vigile : il laisse ta page
+envoyer la requête, mais ne lui remet la réponse que si l'API a signé un laissez-passer
+(`Access-Control-Allow-Origin`) pour cette origine.
+
+- **Preflight** : avant un `PATCH`, un `DELETE` ou un POST en JSON, le navigateur envoie
+  d'abord un `OPTIONS` pour demander la permission. Le middleware de FastAPI y répond.
+- `localhost` et `127.0.0.1` sont deux origines : on liste les deux (réglage `CORS_ORIGINS`).
+- CORS protège l'utilisateur du navigateur, pas l'API : `curl` n'est pas concerné. Ce n'est
+  pas de l'authentification.
+
 ---
 
 ## Prochaines notions
