@@ -80,3 +80,51 @@ champs, ce qu'une expression régulière ferait mal car les offres n'ont aucun f
 - (−) Pas d'authentification ni de limitation de débit : quiconque atteint l'endpoint
   peut dépenser la clé. À ajouter avant tout déploiement public.
 - (−) La défense contre l'injection de prompt est une atténuation, pas une garantie.
+
+## Évaluation réelle (2026-11-10)
+
+Quatre vraies offres ont été envoyées à l'endpoint avec le vrai modèle (RBC, Nuovo
+Artistic Studios, deux textes d'Ericsson Canada). L'évaluation a été faite en comparant
+chaque réponse au texte source de l'offre. Aucune hallucination n'a été relevée : chaque
+valeur renvoyée figurait dans le texte, et les champs absents sont restés `null`.
+
+Trois constats :
+
+1. **RBC, deux dates.** Le texte donne une date (le 16) et une date officielle (le 17,
+   avec fermeture la veille). Le modèle a retenu le 17. Ce choix est défendable mais il
+   n'est pas garanti : une offre qui contient plusieurs dates est ambiguë.
+2. **Nuovo, compétences mélangées.** `skills` contenait des compétences techniques (Python,
+   Git) et des pratiques ou activités (revues de code, documentation, tests, design UI/UX).
+   Cela rendait la liste peu utilisable.
+3. **Ericsson, `position` à `null` avec injection.** Un des deux textes d'Ericsson
+   contient une instruction piégée. Sur le texte sans injection, le modèle a trouvé
+   « Développeur de logiciels » ; sur le texte avec injection, `position` est resté `null`.
+   L'attaque a échoué (rien de ce que demandait l'instruction ne figure dans la réponse),
+   mais l'extraction a été dégradée.
+
+### Corrections apportées
+
+- **Le prompt** précise que `skills` ne contient que des compétences techniques (langages,
+  frameworks, bibliothèques, outils, bases de données, plateformes), sans pratiques,
+  activités ni qualités personnelles.
+- **`skills` vaut `[]` quand rien n'est trouvé**, et non plus `null`. Le champ du schéma
+  passe de `list[str] | None` à `list[str]`. Pour une liste, « aucune » et « liste vide »
+  sont la même chose : le client n'a plus qu'un seul cas à gérer. Les quatre autres champs
+  gardent `null` pour « absent de l'offre » (cela corrige la phrase « tous peuvent être
+  `null` » de la décision initiale, qui ne vaut plus pour `skills`).
+- Un test réel (`live_llm`) vérifie que les pratiques ne reviennent pas dans `skills`. Il
+  peut échouer de temps en temps à cause du non-déterminisme du modèle : un échec doit être
+  examiné avant d'être considéré comme un bug.
+
+### Limites connues, non corrigées
+
+- **Dates multiples** (RBC) : le modèle choisit une date, sans signaler l'ambiguïté. Le
+  client doit vérifier la date avant de créer la candidature.
+- **Texte contenant une injection** (Ericsson) : une attaque qui échoue peut quand même
+  dégrader l'extraction (`position` à `null`). Les champs sont à vérifier, ce qui justifie
+  que l'endpoint ne sauvegarde rien.
+- **Variabilité** : après les corrections ci-dessus, une relance des quatre offres a
+  donné `position = null` pour le texte d'Ericsson sans injection, alors que la première
+  exécution avait trouvé « Développeur de logiciels ». Le même texte ne donne donc pas
+  toujours la même réponse : le constat 3 ne peut pas être attribué à la seule injection.
+- Quatre offres forment un échantillon trop petit pour mesurer un taux de réussite.

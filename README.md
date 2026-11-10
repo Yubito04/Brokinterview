@@ -131,8 +131,10 @@ the application with `POST /applications`.
   "deadline": "2026-12-15", "skills": ["Python", "PostgreSQL"] }
 ```
 
-Every field can be `null` when the posting does not say. `skills` is returned but not
-stored (no column yet).
+`company`, `position`, `location` and `deadline` are `null` when the posting does not say.
+`skills` only holds technical skills (languages, frameworks, tools, platforms) and is an
+empty list `[]`, never `null`, when there are none. It is returned but not stored (no
+column yet).
 
 | Status | Meaning |
 |--------|---------|
