@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { API_URL } from './config'
+import { api } from './api'
 
 // The three situations the screen can be in: waiting, answered, or failed.
 type HealthState =
@@ -12,12 +12,9 @@ function App() {
 
   // Runs once, after the first display: asks the API if it is alive.
   useEffect(() => {
-    fetch(`${API_URL}/health`)
-      .then((response) => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`)
-        return response.json()
-      })
-      .then((body: { status: string }) =>
+    api
+      .request<{ status: string }>('/health')
+      .then((body) =>
         setHealth(body.status === 'ok' ? { kind: 'ok' } : { kind: 'error', message: 'Unexpected answer' }),
       )
       .catch((error: Error) => setHealth({ kind: 'error', message: error.message }))

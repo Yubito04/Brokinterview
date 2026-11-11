@@ -420,6 +420,37 @@ port 5174, une origine non autorisée.
 - **Effet (`useEffect`)** : du code exécuté après l'affichage ; avec `[]`, une seule fois.
   C'est l'endroit pour appeler l'API.
 
+## 49. Le contrat de l'API et les types générés
+
+`openapi.json` décrit l'API ; les types TypeScript en sont tirés au lieu d'être réécrits à la
+main. Si le backend change, le test pytest et `openapi-typescript --check` échouent tant que
+les fichiers ne sont pas régénérés. Un fichier « généré » ne se modifie jamais à la main : on
+modifie la source et on régénère. `.gitattributes` (`eol=lf`) empêche Git de changer les fins
+de ligne d'un fichier dont on compare le contenu octet par octet.
+
+## 50. Une dépendance « peer » et le piège de TypeScript 7
+
+`openapi-typescript` déclare `typescript ^5.x` en peer : c'est au projet de fournir
+TypeScript, dans une version compatible. Avec TypeScript 7, `npm install` refuse ; forcé,
+l'outil plante (`ts.factory` n'existe plus). Décision : TypeScript 5.9.3 (ADR 008, backlog
+pour y revenir). Je l'ai constaté en testant dans un dossier temporaire avant de toucher au
+projet.
+
+## 51. `AbortController` et le délai maximum
+
+Une requête sans limite peut attendre indéfiniment. `AbortController` fournit un `signal` à
+passer à `fetch` ; `abort()` arrête la requête. Un `setTimeout` déclenche `abort()` au bout du
+délai, et on le désarme (`clearTimeout`) si la réponse arrive à temps. Un drapeau `timedOut`
+distingue le délai de l'annulation volontaire. L'annulation ne prévient pas le serveur de
+travailler pour rien.
+
+## 52. Tester avec un faux `fetch` et de faux minuteurs
+
+Le client reçoit `fetch` en paramètre : les tests le remplacent par une fonction qui renvoie
+des réponses fabriquées (422, 502...), sans réseau. `vi.useFakeTimers()` fait avancer le temps
+à la demande : un délai de 60 s se teste en quelques millisecondes. Vérifié en cassant
+volontairement le code : deux tests ont échoué comme prévu.
+
 ---
 
 ## Prochaines notions

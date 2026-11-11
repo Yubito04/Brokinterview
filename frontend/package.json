@@ -9,7 +9,9 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "generate:api": "openapi-typescript ../backend/openapi.json -o src/api/schema.d.ts",
-    "check:api": "openapi-typescript ../backend/openapi.json -o src/api/schema.d.ts --check"
+    "check:api": "openapi-typescript ../backend/openapi.json -o src/api/schema.d.ts --check",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.5",
@@ -25,6 +27,7 @@
     "openapi-typescript": "7.13.0",
     "oxlint": "^1.90.0",
     "typescript": "5.9.3",
-    "vite": "^8.3.6"
+    "vite": "^8.3.6",
+    "vitest": "5.1.0"
   }
 }

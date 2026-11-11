@@ -66,6 +66,41 @@ générateur (remet en cause un choix validé). `npm run build` et `npm run lint
 avant. On pourra repasser à TypeScript 7 quand `openapi-typescript` le supportera
 (voir `docs/backlog.md`).
 
+## Le contrat OpenAPI et la couche d'appels (étape 3)
+
+**Contrat.** `backend/openapi.json` est la description de l'API, générée sans serveur par
+`python -m scripts.export_openapi` et versionnée. Le script et le test de péremption appellent
+la même fonction `render_openapi()` (clés triées, indentation fixe, fin de ligne LF) : la
+comparaison est déterministe. `.gitattributes` force LF sur ce fichier et sur les types, pour
+que Git sous Windows ne les convertisse pas en CRLF.
+
+**Types.** `frontend/src/api/schema.d.ts` est généré depuis ce fichier par
+`npm run generate:api` ; il porte un en-tête « auto-generated » et ne s'édite pas à la main.
+
+**Trois filets contre un contrat périmé :** (1) un test pytest compare `openapi.json` à
+l'application ; (2) `npm run check:api` (`openapi-typescript --check`) compare les types au
+contrat ; (3) le compilateur `tsc` refusera un code qui utilise un champ disparu (ce filet
+deviendra actif dès que les écrans utiliseront ces types). Les filets 1 et 2 ont été vérifiés
+en cassant volontairement un fichier.
+
+**Un seul module d'appels.** Aucun composant n'appelle `fetch` : tout passe par
+`src/api/client.ts`, qui a trois responsabilités : construire l'adresse, traduire les erreurs
+et limiter l'attente. Une règle de lint (`no-restricted-globals` sur `fetch`, désactivée dans
+`src/api/`) l'impose. Raison : si l'on change la gestion des erreurs, on la change à un seul
+endroit, et les écrans ne connaissent pas le format de FastAPI.
+
+**Traduction des erreurs** (`ApiError`, avec un `kind`) : 422 → erreurs par champ via
+`detail[].loc` ; un `loc` réduit à `["body"]` (règle PATCH « X cannot be null ») → erreur
+générale ; 404 → `not_found` ; 502 → `upstream` ; 503 → `unavailable` ; délai dépassé →
+`timeout` ; `Failed to fetch` → `network`. Testé avec Vitest (15 tests, `fetch` simulé).
+
+**Délai maximum.** 10 s par défaut, 60 s pour l'extraction (`EXTRACTION_TIMEOUT_MS`), réglable
+par appel. Il repose sur `AbortController` : une télécommande pour une requête. On donne son
+`signal` à `fetch` ; `controller.abort()` arrête la requête, qui échoue aussitôt. Le client
+distingue « trop lent » (on affiche un message) d'« annulé par l'écran » (l'erreur
+`AbortError` remonte telle quelle, ce n'est pas un échec à montrer). Limite : annuler côté
+navigateur n'arrête pas le travail du serveur, donc l'appel au modèle (payant) continue.
+
 ## Conséquences
 
 - (+) Un socle moderne, typé et testable ; chaque choix est défendable en entretien.

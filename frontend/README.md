@@ -35,4 +35,7 @@ gives `ERR_CONNECTION_REFUSED`: nothing listens on IPv4. The backend allows both
 ```powershell
 npm run build   # type-check and build for production (output in dist/, ignored by Git)
 npm run lint    # check the code with Oxlint
+npm run test    # run the Vitest tests once (test:watch re-runs them on every change)
+npm run generate:api  # regenerate src/api/schema.d.ts from ../backend/openapi.json
+npm run check:api     # fail if the generated types are out of date
 ```

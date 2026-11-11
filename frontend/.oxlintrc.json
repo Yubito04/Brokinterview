@@ -3,6 +3,16 @@
   "plugins": ["react", "typescript", "oxc"],
   "rules": {
     "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+    "react/only-export-components": ["warn", { "allowConstantExport": true }],
+    "no-restricted-globals": [
+      "error",
+      { "name": "fetch", "message": "Call the API through src/api (api.request), never fetch directly." }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["src/api/**"],
+      "rules": { "no-restricted-globals": "off" }
+    }
+  ]
 }

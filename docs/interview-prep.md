@@ -593,6 +593,41 @@ d'une erreur CORS, pour ne pas révéler d'informations à une page non autoris�
 Console (F12) : pour CORS, elle indique « blocked by CORS policy » ; pour un backend éteint,
 une erreur de connexion refusée dans l'onglet Réseau.
 
+### Pourquoi générer les types du frontend plutôt que les écrire ?
+
+**Réponse modèle.** Deux copies écrites à la main finissent par diverger sans que personne le
+remarque. Ici le backend décrit son API dans `openapi.json`, le frontend en génère ses types, et
+trois filets détectent un décalage : un test pytest, `openapi-typescript --check` et le
+compilateur TypeScript. Le fichier généré porte un en-tête qui interdit de l'éditer.
+
+### Pourquoi aucun composant n'appelle `fetch` directement ?
+
+**Réponse modèle.** Pour centraliser trois choses : l'adresse de l'API, la traduction des
+erreurs (422 en erreurs par champ, 502/503/timeout en messages clairs) et le délai maximum. Les
+écrans reçoivent une `ApiError` typée et ne connaissent pas le format de FastAPI. Une règle de
+lint l'impose, hors du dossier `src/api/`.
+
+### Comment annules-tu une requête ou limites-tu son attente ?
+
+**Réponse modèle.** Avec `AbortController` : on passe son `signal` à `fetch`, et `abort()` fait
+échouer la requête. Un minuteur appelle `abort()` après le délai ; on l'annule si la réponse
+arrive. Un drapeau distingue le délai (message à l'utilisateur) de l'annulation volontaire
+(laissée passer). Limite : le serveur ne sait pas qu'on a annulé, et l'appel payant au modèle
+continue.
+
+### Pourquoi injecter `fetch` dans le client ?
+
+**Réponse modèle.** Pour tester sans réseau : le test fournit un faux `fetch` qui renvoie la
+réponse voulue, ou qui ne répond jamais pour tester le délai (avec de faux minuteurs). Le code
+de production reçoit le vrai `fetch`.
+
+### Pourquoi TypeScript 5.9 et pas 7 ?
+
+**Réponse modèle.** `openapi-typescript` déclare TypeScript 5 en dépendance peer et plante avec
+la version 7 (l'ancienne API JavaScript du compilateur a disparu). Je veux une seule version de
+TypeScript dans le projet, donc je suis resté en 5.9.3 et j'ai noté dans le backlog de revenir
+à 7 quand l'outil le supportera.
+
 ---
 
 ## Déploiement
