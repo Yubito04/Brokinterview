@@ -451,6 +451,16 @@ des réponses fabriquées (422, 502...), sans réseau. `vi.useFakeTimers()` fait
 à la demande : un délai de 60 s se teste en quelques millisecondes. Vérifié en cassant
 volontairement le code : deux tests ont échoué comme prévu.
 
+## 53. Les délais diminuent en descendant dans la chaîne
+
+Chaque couche (navigateur, backend, appel au modèle) a son délai maximum, et ils doivent
+décroître : sinon la couche du dessus abandonne sans comprendre, et celle du dessous continue
+de travailler (et de payer) pour rien. Le délai d'httpx est **par phase** d'une tentative, pas
+un total ; avec les retries du SDK, le pire cas se calcule : tentatives × délai + pauses.
+Un dépassement renvoie **504** (le service amont n'a pas répondu à temps), différent du 502
+(mauvaise réponse ou panne) et du 503 (non configuré). `asyncio.timeout` n'aide pas dans une
+route `def` : il n'interrompt que les coroutines. Mesuré : 12 appels réels, de 1,5 à 4,2 s.
+
 ---
 
 ## Prochaines notions

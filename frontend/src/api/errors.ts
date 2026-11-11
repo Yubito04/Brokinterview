@@ -4,6 +4,7 @@ export type ApiErrorKind =
   | 'not_found' // 404
   | 'unavailable' // 503: the service cannot do this right now
   | 'upstream' // 502: the API is fine, the AI service behind it failed
+  | 'upstream_timeout' // 504: the AI service did not answer in time
   | 'timeout' // we gave up waiting
   | 'network' // no answer at all: API off, CORS, no connection
   | 'http' // any other error status
@@ -84,6 +85,11 @@ export async function errorFromResponse(response: Response): Promise<ApiError> {
   }
   if (status === 502) {
     return new ApiError('upstream', 'The AI service failed. Try again in a moment.', { status })
+  }
+  if (status === 504) {
+    return new ApiError('upstream_timeout', 'The AI service took too long. Try again.', {
+      status,
+    })
   }
   const message = typeof detail === 'string' ? detail : `Unexpected error (HTTP ${status}).`
   return new ApiError('http', message, { status })

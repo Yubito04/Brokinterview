@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
-from app.llm import ExtractionFailed, ExtractionUnavailable
+from app.llm import ExtractionFailed, ExtractionTimedOut, ExtractionUnavailable
 from app.routers import applications, contacts, job_postings
 
 app = FastAPI(title="ApplyFlow AI")
@@ -24,6 +24,14 @@ app.include_router(job_postings.router)
 def handle_extraction_unavailable(request: Request, error: ExtractionUnavailable):
     # 503: the service cannot do this right now (no API key configured).
     return JSONResponse(status_code=503, content={"detail": str(error)})
+
+
+@app.exception_handler(ExtractionTimedOut)
+def handle_extraction_timed_out(request: Request, error: ExtractionTimedOut):
+    # 504: we acted as a gateway to the model, and it did not answer in time.
+    return JSONResponse(
+        status_code=504, content={"detail": "AI extraction timed out, try again"}
+    )
 
 
 @app.exception_handler(ExtractionFailed)

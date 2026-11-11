@@ -5,11 +5,16 @@ import anthropic
 import httpx2
 import pytest
 
+from app.config import Settings
 from app.llm import (
     SYSTEM_PROMPT,
     AnthropicJobExtractor,
     ExtractedJob,
     ExtractionFailed,
+    ExtractionTimedOut,
+    MODEL_ATTEMPT_TIMEOUT,
+    MODEL_MAX_RETRIES,
+    get_job_extractor,
 )
 
 TOKEN_USAGE = {"input_tokens": 10, "output_tokens": 10}
@@ -28,11 +33,11 @@ def message_json(text: str, stop_reason: str = "end_turn") -> dict:
     }
 
 
-def build_extractor(handler) -> AnthropicJobExtractor:
+def build_extractor(handler, max_retries: int = 0) -> AnthropicJobExtractor:
     # The real SDK, but its HTTP layer is replaced: no network, no cost, and we can
     # inspect exactly what would have been sent to Anthropic.
     http_client = httpx2.Client(transport=httpx2.MockTransport(handler))
-    client = anthropic.Anthropic(api_key="test-key", http_client=http_client, max_retries=0)
+    client = anthropic.Anthropic(api_key="test-key", http_client=http_client, max_retries=max_retries)
     return AnthropicJobExtractor(client, "claude-haiku-5-5")
 
 
@@ -158,3 +163,48 @@ def test_answer_that_breaks_the_schema_becomes_extraction_failed():
 
     with pytest.raises(ExtractionFailed):
         extractor.extract("text", date(2026, 11, 9))
+
+
+def test_timeout_becomes_extraction_timed_out():
+    def handler(request):
+        raise httpx2.ReadTimeout("too slow")
+
+    with pytest.raises(ExtractionTimedOut):
+        build_extractor(handler).extract("text", date(2026, 11, 9))
+
+
+def test_a_timeout_is_still_an_extraction_failed():
+    # ExtractionTimedOut is a kind of ExtractionFailed: code that catches the
+    # general one keeps working.
+    assert issubclass(ExtractionTimedOut, ExtractionFailed)
+
+
+def test_a_timeout_is_tried_exactly_twice_with_one_retry(monkeypatch):
+    # Skip the real pause between attempts, so the test is instant.
+    monkeypatch.setattr(anthropic._base_client.SyncAPIClient, "_sleep_for_retry", lambda *a, **k: None)
+    attempts = []
+
+    def handler(request):
+        attempts.append(request)
+        raise httpx2.ReadTimeout("too slow")
+
+    extractor = build_extractor(handler, max_retries=MODEL_MAX_RETRIES)
+    with pytest.raises(ExtractionTimedOut):
+        extractor.extract("text", date(2026, 11, 9))
+
+    assert len(attempts) == 2  # the first try + one retry, never three
+
+
+def test_real_client_is_configured_with_the_time_budget(monkeypatch):
+    monkeypatch.setattr("app.llm.get_settings", lambda: Settings(_env_file=None, database_url="x", anthropic_api_key="k"))
+
+    client = get_job_extractor().client
+
+    assert client.max_retries == MODEL_MAX_RETRIES == 1
+    assert client.timeout == MODEL_ATTEMPT_TIMEOUT
+    # Worst case: every attempt spends its whole connect time and its whole read time,
+    # plus under 1 s of pause between attempts. It must stay under the frontend's 60 s.
+    per_attempt = MODEL_ATTEMPT_TIMEOUT.connect + MODEL_ATTEMPT_TIMEOUT.read
+    worst_case = (MODEL_MAX_RETRIES + 1) * per_attempt + 1
+    assert worst_case == 51
+    assert worst_case < 60

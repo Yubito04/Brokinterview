@@ -2,6 +2,7 @@ from datetime import date
 from typing import Protocol
 
 import anthropic
+import httpx2
 from pydantic import BaseModel, ValidationError
 
 from app.config import get_settings
@@ -13,6 +14,23 @@ class ExtractionUnavailable(Exception):
 
 class ExtractionFailed(Exception):
     """The model call failed or gave an unusable answer. Becomes HTTP 502."""
+
+
+class ExtractionTimedOut(ExtractionFailed):
+    """The model did not answer in time. Becomes HTTP 504."""
+
+
+# Time budget. The delays must shrink as we go down the chain, so that each layer
+# gives up BEFORE the layer above it and can report a clear error:
+#   frontend 60 s  >  this backend, about 51 s at worst  >  one model attempt.
+# Worst case: 2 attempts (1 try + 1 retry), each up to 5 s to connect + 20 s to
+# read = 50 s, plus under 1 s of pause between them = about 51 s, under 60 s.
+# It is NOT a strict cap: the httpx timeout applies to each phase of an attempt
+# (connect, write, read), not to the total, and the read timer restarts each time
+# a chunk of the answer arrives. A strict total would need a global deadline
+# (see docs/backlog.md).
+MODEL_ATTEMPT_TIMEOUT = httpx2.Timeout(20.0, connect=5.0)
+MODEL_MAX_RETRIES = 1
 
 
 class ExtractedJob(BaseModel):
@@ -82,6 +100,9 @@ class AnthropicJobExtractor:
                 # The Pydantic class becomes the JSON schema the answer must follow.
                 output_format=ExtractedJob,
             )
+        except anthropic.APITimeoutError as error:
+            # Must come before APIError, which it is a kind of.
+            raise ExtractionTimedOut(type(error).__name__) from error
         except anthropic.APIError as error:
             # Covers network errors, rate limits, bad key, server errors.
             # The details stay in the server logs, not in the client's answer.
@@ -105,6 +126,8 @@ def get_job_extractor() -> JobExtractor:
     # The key is passed explicitly: pydantic-settings reads .env but does not put
     # its values in os.environ, so the SDK would not find it by itself.
     client = anthropic.Anthropic(
-        api_key=settings.anthropic_api_key, max_retries=2, timeout=30.0
+        api_key=settings.anthropic_api_key,
+        max_retries=MODEL_MAX_RETRIES,
+        timeout=MODEL_ATTEMPT_TIMEOUT,
     )
     return AnthropicJobExtractor(client, settings.anthropic_model)

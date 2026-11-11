@@ -145,6 +145,16 @@ describe('other error statuses', () => {
     expect(error.message).toMatch(/AI service failed/)
   })
 
+  it('504 becomes upstream_timeout, distinct from the client-side timeout', async () => {
+    const { client } = clientAnswering(jsonResponse(504, { detail: 'AI extraction timed out' }))
+
+    const error = await failureOf(client.request('/job-postings/extract', { method: 'POST' }))
+
+    expect(error.kind).toBe('upstream_timeout')
+    expect(error.status).toBe(504)
+    expect(error.message).toMatch(/took too long/)
+  })
+
   it('503 becomes unavailable with a clear message', async () => {
     const { client } = clientAnswering(jsonResponse(503, { detail: 'no key' }))
 

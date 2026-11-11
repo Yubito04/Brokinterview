@@ -4,7 +4,13 @@ import pytest
 from sqlalchemy import func, select
 
 from app.config import Settings
-from app.llm import ExtractedJob, ExtractionFailed, ExtractionUnavailable, get_job_extractor
+from app.llm import (
+    ExtractedJob,
+    ExtractionFailed,
+    ExtractionTimedOut,
+    ExtractionUnavailable,
+    get_job_extractor,
+)
 from app.main import app
 from app.models import Application, Contact
 from fakes import FakeJobExtractor
@@ -110,6 +116,15 @@ def test_model_failure_returns_502_without_details(client, use_extractor):
 
     assert response.status_code == 502
     assert "secret-detail" not in response.text
+
+
+def test_model_timeout_returns_504_with_a_clear_message(client, use_extractor):
+    use_extractor(FakeJobExtractor(error=ExtractionTimedOut("APITimeoutError")))
+
+    response = extract(client)
+
+    assert response.status_code == 504
+    assert response.json() == {"detail": "AI extraction timed out, try again"}
 
 
 def test_missing_api_key_returns_503(client, monkeypatch):
