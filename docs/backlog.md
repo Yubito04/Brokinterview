@@ -10,4 +10,12 @@ Pistes d'amélioration identifiées, pas encore réalisées.
   « Docker » dans l'évaluation initiale. Une comparaison littérale ratera les variantes
   d'écriture (« UNIX/Linux » contre « Linux ») : elle sert à alerter, pas à rejeter.
 
-Contexte : [ADR 006](adr/006-extraction-d-offres-par-llm.md), section « Évaluation réelle ».
+## Frontend (ADR 008)
+
+- **Repasser à TypeScript 7.** Le projet est en TypeScript 5.9.3 car `openapi-typescript`
+  7.13.0 exige TypeScript 5 et plante avec TypeScript 7. Quand une version compatible sort :
+  mettre à jour les deux, puis relancer `npm run build`, `npm run lint` et `npm run check:api`.
+  Contexte : [ADR 008](adr/008-choix-techniques-du-frontend.md), section « Piège rencontré :
+  TypeScript 7 contre openapi-typescript ».
+
+Contexte (extraction) : [ADR 006](adr/006-extraction-d-offres-par-llm.md), section « Évaluation réelle ».

@@ -51,6 +51,21 @@ Le serveur de développement Vite écoute sur `localhost`, que Node résout ici 
 deux origines ; en pratique une seule fonctionne avec les réglages par défaut. Alternative
 écartée : `server.host: true`, qui ouvre le serveur au réseau local sans besoin.
 
+## Piège rencontré : TypeScript 7 contre openapi-typescript
+
+Le scaffold installait TypeScript 7.0.2. Au moment d'ajouter `openapi-typescript` 7.13.0
+(dernière version), `npm install` a refusé : l'outil déclare `typescript ^5.x` en dépendance
+« peer » (une bibliothèque que le projet doit fournir lui-même, dans une version compatible).
+Forcé avec `--legacy-peer-deps`, il plante (`ts.factory` est `undefined`) : TypeScript 7 est une
+réécriture native qui n'expose plus l'ancienne API JavaScript dont le générateur dépend. Un
+contournement par `overrides` a aussi été refusé par npm.
+
+Décision : **TypeScript 5.9.3, une seule version dans le projet** (versions exactes, sans `^`
+ni `~`). Alternatives écartées : garder deux versions de TypeScript (fragile), ou changer de
+générateur (remet en cause un choix validé). `npm run build` et `npm run lint` passent comme
+avant. On pourra repasser à TypeScript 7 quand `openapi-typescript` le supportera
+(voir `docs/backlog.md`).
+
 ## Conséquences
 
 - (+) Un socle moderne, typé et testable ; chaque choix est défendable en entretien.
