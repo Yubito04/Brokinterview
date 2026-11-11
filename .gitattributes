@@ -1,0 +1,3 @@
+# Generated API contract: always LF, on every OS, so the committed bytes match
+# what scripts/export_openapi.py writes and the staleness test stays stable.
+backend/openapi.json text eol=lf
