@@ -557,13 +557,13 @@ plus adapté.
 ### Quels délais maximum as-tu, et pourquoi ces valeurs ?
 
 **Réponse modèle.** Trois niveaux décroissants : le navigateur attend 60 s au plus, le backend
-environ 51 s au pire, une tentative auprès du modèle 5 s de connexion plus 20 s de lecture. Avec
-un seul retry : 2 × 25 s + moins d'1 s de pause. Ce n'est pas un plafond strict, car le délai
+environ 41 s au pire, une tentative auprès du modèle 5 s de connexion plus 15 s de lecture. Avec
+un seul retry : 2 × 20 s + moins d'1 s de pause, sous l'objectif de 45 s. Ce n'est pas un plafond strict, car le délai
 d'httpx s'applique à chaque phase et non au total, et la lecture repart à chaque morceau reçu.
 Chaque
 couche doit abandonner avant celle du dessus pour renvoyer une erreur claire et ne pas payer un
 appel dont personne n'attend le résultat. Les valeurs viennent des latences mesurées : de 1,5 à
-4,2 s pour Haiku sur des offres réelles, donc 20 s laisse une grande marge. Le détail à connaître :
+4,2 s pour Haiku sur des offres réelles, donc 15 s de lecture laisse une grande marge. Le détail à connaître :
 le délai d'httpx est par phase, pas un total, donc on calcule le pire cas avec le nombre de
 tentatives.
 

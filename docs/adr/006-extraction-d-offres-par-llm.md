@@ -185,15 +185,17 @@ abandonnait à 60 s et le backend continuait de payer l'appel sans que personne 
 
 **Principe : les délais diminuent en descendant dans la chaîne**, pour que chaque couche
 abandonne avant celle du dessus et puisse dire pourquoi :
-frontend 60 s > backend, environ 51 s au pire > une tentative (5 s de connexion + 20 s de
+frontend 60 s > backend, environ 41 s au pire > une tentative (5 s de connexion + 15 s de
 lecture au maximum).
 
-**Décision.** `httpx2.Timeout(20.0, connect=5.0)` et `max_retries=1` : 2 tentatives, chacune
-avec au plus 5 s de connexion et 20 s de lecture (2 × 25 = 50 s), plus moins d'1 s de pause,
-soit **environ 51 s au pire**, sous les 60 s du frontend. Ce n'est **pas un plafond strict** :
+**Décision.** `httpx2.Timeout(15.0, connect=5.0)` et `max_retries=1` : 2 tentatives, chacune
+avec au plus 5 s de connexion et 15 s de lecture (2 × 20 = 40 s), plus moins d'1 s de pause,
+soit **environ 41 s au pire**, sous l'objectif de 45 s et sous les 60 s du frontend. Ce n'est
+**pas un plafond strict** :
 le délai d'httpx s'applique à chaque phase, pas au total, et le minuteur de lecture repart à
-chaque morceau de réponse reçu. Une première version de ce texte annonçait 41 s en oubliant
-la connexion, et visait 45 s : cet objectif n'est pas atteint. Un dépassement lève `ExtractionTimedOut`
+chaque morceau de réponse reçu. Historique : une première version (lecture à 20 s) annonçait
+41 s en oubliant la connexion ; le vrai pire cas était d'environ 51 s, au-dessus de l'objectif
+de 45 s. D'où la lecture ramenée à 15 s. Un dépassement lève `ExtractionTimedOut`
 (sous-classe d'`ExtractionFailed`) et la route répond **504 Gateway Timeout** avec le détail
 « AI extraction timed out, try again ». Le 504 dit : notre serveur a fait appel à un service
 amont qui n'a pas répondu à temps. Il se distingue du 502 (réponse invalide ou panne) et du
@@ -205,12 +207,12 @@ ne servirait à rien ici. Avec une route `async` et un client asynchrone, on pou
 échéance globale stricte (par exemple 45 s), ce qui donnerait un vrai plafond.
 
 **Limite connue.** Si l'API répond 429 avec un en-tête `Retry-After`, le SDK dort aussi
-longtemps que demandé, sans plafond : le budget de 51 s n'est alors pas garanti (voir backlog).
+longtemps que demandé, sans plafond : le budget de 41 s n'est alors pas garanti (voir backlog).
 
 **Latences mesurées** (Haiku 5.5, effort `low`, 4 offres réelles de 2 900 à 6 200 caractères,
 3 passages chacune, 12 appels) : minimum 1,5 s, médiane 2,7 s, maximum 4,2 s. Les 3 tests
-`live_llm` prennent 1,1 à 2,3 s chacun. Une lecture limitée à 20 s a donc une marge d'environ
-cinq fois le maximum observé. Échantillon petit, un seul jour et une seule connexion : à
+`live_llm` prennent 1,1 à 2,3 s chacun. Une lecture limitée à 15 s a donc une marge d'environ
+trois fois et demie le maximum observé. Échantillon petit, un seul jour et une seule connexion : à
 remesurer avant un déploiement.
 
 ## Backlog

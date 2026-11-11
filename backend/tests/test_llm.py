@@ -203,8 +203,9 @@ def test_real_client_is_configured_with_the_time_budget(monkeypatch):
     assert client.max_retries == MODEL_MAX_RETRIES == 1
     assert client.timeout == MODEL_ATTEMPT_TIMEOUT
     # Worst case: every attempt spends its whole connect time and its whole read time,
-    # plus under 1 s of pause between attempts. It must stay under the frontend's 60 s.
+    # plus under 1 s of pause between attempts. It must stay under our 45 s target,
+    # itself under the frontend's 60 s.
     per_attempt = MODEL_ATTEMPT_TIMEOUT.connect + MODEL_ATTEMPT_TIMEOUT.read
     worst_case = (MODEL_MAX_RETRIES + 1) * per_attempt + 1
-    assert worst_case == 51
-    assert worst_case < 60
+    assert worst_case == 41  # 2 x (5 + 15) + 1
+    assert worst_case < 45 < 60

@@ -22,14 +22,15 @@ class ExtractionTimedOut(ExtractionFailed):
 
 # Time budget. The delays must shrink as we go down the chain, so that each layer
 # gives up BEFORE the layer above it and can report a clear error:
-#   frontend 60 s  >  this backend, about 51 s at worst  >  one model attempt.
-# Worst case: 2 attempts (1 try + 1 retry), each up to 5 s to connect + 20 s to
-# read = 50 s, plus under 1 s of pause between them = about 51 s, under 60 s.
+#   frontend 60 s  >  this backend, about 41 s at worst  >  one model attempt.
+# Worst case: 2 attempts (1 try + 1 retry), each up to 5 s to connect + 15 s to
+# read = 40 s, plus under 1 s of pause between them = about 41 s, under 45 s
+# (our target) and under the frontend's 60 s.
 # It is NOT a strict cap: the httpx timeout applies to each phase of an attempt
 # (connect, write, read), not to the total, and the read timer restarts each time
 # a chunk of the answer arrives. A strict total would need a global deadline
 # (see docs/backlog.md).
-MODEL_ATTEMPT_TIMEOUT = httpx2.Timeout(20.0, connect=5.0)
+MODEL_ATTEMPT_TIMEOUT = httpx2.Timeout(15.0, connect=5.0)
 MODEL_MAX_RETRIES = 1
 
 
