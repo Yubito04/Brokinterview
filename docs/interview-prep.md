@@ -3,6 +3,28 @@
 Questions probables et réponses modèles, classées par thème.
 À relire et à reformuler avec mes propres mots : une réponse récitée se remarque.
 
+**Avant un entretien, dans cet ordre :**
+1. la fiche d'une page, [`fiche-entretien.md`](fiche-entretien.md) (les 15 questions les plus probables) ;
+2. [Limites à admettre](#limites-à-admettre) : les reconnaître avant qu'on me les fasse remarquer ;
+3. la [démonstration de 5 minutes](#démonstration-de-5-minutes) ;
+4. puis les thèmes ci-dessous, selon la question posée.
+
+## Table des matières
+
+- [Architecture](#architecture) : choix du framework, ADR, configuration et secrets
+- [API](#api) : codes HTTP, validation, `PUT` / `PATCH`, CORS, pagination
+- [Base de données](#base-de-données) : ORM, sessions, modèle, cascade, recherche
+- [Migrations (Alembic)](#migrations-alembic) : pourquoi, comment les tester
+- [Tests](#tests) : vraie base, isolation, garde-fous
+- [IA](#ia) : extraction, fiabilité, injection de prompt, coût, délais
+- [Frontend](#frontend) : client d'API, URL et filtres, i18n, formulaires, dates, accessibilité, import
+- [Limites à admettre](#limites-à-admettre)
+- [Déploiement](#déploiement) : ce qui existe, ce qui manque
+- [Démonstration de 5 minutes](#démonstration-de-5-minutes)
+
+Autres documents : [ADR](adr/README.md) (les décisions), [learning-log](learning-log.md) (les notions
+apprises), [backlog](backlog.md) (ce qui reste à faire).
+
 ---
 
 ## Architecture
