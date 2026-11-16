@@ -29,4 +29,32 @@ Pistes d'amélioration identifiées, pas encore réalisées.
   `retry` en fonction (un seul essai si `error.kind === 'network'`) couvrirait les coupures
   brèves sans retarder les autres erreurs. À réserver aux requêtes GET, pas aux écritures.
 
+- **Une erreur 500 non gérée doit garder ses en-têtes CORS.** Aujourd'hui, une exception non
+  attrapée (vu pendant les essais : la migration `location`/`deadline` n'était pas appliquée,
+  donc SQLAlchemy levait une erreur) renvoie une 500 *sans* `Access-Control-Allow-Origin`. Le
+  navigateur bloque alors la lecture de la réponse, `fetch` échoue comme une panne réseau, et
+  l'écran affiche « API injoignable » au lieu d'une erreur serveur.
+
+  *Pourquoi.* Starlette empile des couches autour de l'application. La 500 des exceptions non
+  gérées est fabriquée par `ServerErrorMiddleware`, la couche **la plus extérieure**, donc
+  *au-dessus* de `CORSMiddleware` : la réponse ne repasse jamais par lui et personne n'y
+  ajoute les en-têtes. Les erreurs gérées (422, 404, 503…) passent, elles, par le CORS. Un
+  `@app.exception_handler(Exception)` ne règle rien : Starlette le range aussi dans
+  `ServerErrorMiddleware`.
+
+  *Pistes.* (1) Un middleware « attrape-tout » placé **à l'intérieur** du CORS (donc ajouté
+  avant lui, car le dernier ajouté est le plus extérieur) qui attrape l'exception, la journalise
+  et renvoie une 500 JSON propre : la réponse repasse par le CORS. (2) Des handlers pour des
+  classes précises (`SQLAlchemyError`…) : ils vivent dans `ExceptionMiddleware`, à l'intérieur du
+  CORS, mais ne couvrent pas les exceptions imprévues. Recommandation : (1), avec un test pytest
+  (requête avec `Origin`, route qui lève, `raise_server_exceptions=False`) qui vérifie la 500 *et*
+  l'en-tête CORS. Côté frontend, le client pourrait alors afficher un message « erreur du
+  serveur » (kind `http`, statut 500) distinct de `network`.
+
+- **Colonne « Ajoutée le » dans la liste des candidatures.** L'API trie par `created_at`
+  décroissant, mais la date n'apparaît pas à l'écran : l'ordre semble arbitraire. Afficher
+  `created_at` au format `JJ/MM/AAAA` (en réutilisant `formatDeadline`, en prenant les 10
+  premiers caractères de la date ISO ou en la convertissant dans le fuseau local) et
+  ajuster les tests du tableau.
+
 Contexte (extraction) : [ADR 006](adr/006-extraction-d-offres-par-llm.md), section « Évaluation réelle ».

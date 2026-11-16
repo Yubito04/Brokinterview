@@ -461,10 +461,69 @@ Un dépassement renvoie **504** (le service amont n'a pas répondu à temps), di
 (mauvaise réponse ou panne) et du 503 (non configuré). `asyncio.timeout` n'aide pas dans une
 route `def` : il n'interrompt que les coroutines. Mesuré : 12 appels réels, de 1,5 à 4,2 s.
 
+## 54. Les filtres dans l'URL : `push` ou `replace`
+
+Les filtres de l'écran liste (`?status=OFFER&q=acme&page=2`) vivent dans l'URL, pas dans un
+`useState` : la page se recharge, se partage, se met en favori, et « Précédent » revient à
+l'état d'avant. Chaque changement d'URL peut **ajouter** une entrée à l'historique (`push`) ou
+**remplacer** l'entrée courante (`replace`). Page et statut : `push` (vraie navigation).
+Recherche : `replace`, sinon taper « acme » laisse quatre entrées (a, ac, acm, acme). Une
+correction (page trop grande ramenée à la dernière) est aussi un `replace`, sinon « Précédent »
+ramène à la page invalide, qui redirige à nouveau : une boucle.
+
+## 55. Page ↔ offset, et ne jamais faire confiance à l'URL
+
+L'URL parle en pages (« page 3 »), l'API en offset (« saute 40 lignes ») :
+`offset = (page - 1) × limit` et `totalPages = max(1, ceil(total / limit))`. Le `max(1, …)`
+évite « page 1 sur 0 » quand la liste est vide. Comme l'URL est modifiable à la main, chaque
+paramètre est relu strictement : `page=abc`, `-2`, `0`, `1.5`, `2abc` donnent la page 1 (une
+expression régulière `^\d+$` plutôt que `parseInt`, qui accepterait `2abc`) ; un statut inconnu
+ou en minuscules veut dire « pas de filtre ». Ces règles sont des fonctions pures, donc
+testables sans écran.
+
+## 56. TanStack Query : `keepPreviousData` et la clé de requête
+
+`useQuery` met les réponses en cache selon une **clé** (`['applications', {status, q, page}]`) :
+changer un filtre change la clé, donc lance une nouvelle requête (et annule l'ancienne grâce au
+`signal`). Avec `placeholderData: keepPreviousData`, l'ancienne liste reste affichée pendant le
+chargement au lieu d'un écran vide qui clignote ; `isPlaceholderData` permet d'afficher un
+indicateur discret (« Mise à jour… ») et d'éviter d'agir sur des données qui appartiennent à
+d'autres filtres. `retry: false` : par défaut, 3 essais espacés retarderaient l'affichage d'une
+erreur déjà traduite par notre client.
+
+## 57. Le debounce, et le champ qui ne doit pas écraser la frappe
+
+Le debounce attend 300 ms de pause avant de mettre à jour l'URL : une requête par mot, pas par
+lettre. Piège : le champ affiche un brouillon (`draft`) et l'URL est la source de vérité. Quand
+l'URL change à cause du bouton Retour, le champ doit suivre ; mais quand elle change parce que
+*nous* venons d'y écrire « ab » alors que l'utilisateur a déjà tapé « abc », le champ ne doit
+surtout pas être remis à « ab ». Solution : mémoriser la dernière valeur envoyée (`useRef`) et
+ne recopier l'URL dans le champ que si elle en diffère. `useEffectEvent` permet à l'effet
+d'appeler la dernière version de `onSearch` sans se relancer à chaque rendu.
+
+## 58. Tester par rôle et par nom (React Testing Library)
+
+`getByRole('button', {name: 'Page suivante'})` cherche comme un utilisateur ou un lecteur
+d'écran, pas par classe CSS ni position : le test survit à un changement de style, et il échoue
+si un `<label>` manque (un lecteur d'écran n'annoncerait aucun nom). Un faux backend (une
+fonction qui filtre et découpe un tableau) répond aux `fetch` des tests, ce qui vérifie les
+vraies URL demandées sans réseau. Une zone `role="status"` doit exister *avant* que son texte
+change pour être annoncée : elle est toujours rendue, vide la plupart du temps.
+
+## 59. Une 500 sans CORS ressemble à une panne réseau
+
+Pendant l'essai dans le navigateur, une base sans la migration `location`/`deadline` faisait
+lever une erreur SQL à chaque requête : l'écran affichait « API injoignable ». Cause : la 500 des
+exceptions non gérées est produite par la couche la plus extérieure de Starlette, au-dessus du
+CORS, donc sans `Access-Control-Allow-Origin` ; le navigateur cache la réponse et `fetch`
+échoue comme une coupure réseau. Leçon : relancer `alembic upgrade head` après chaque migration
+(ajouté au README), et corriger la gestion des 500 (backlog). Un script de données de démo
+(`scripts/seed_demo.py`) refuse les bases `_test` et ne supprime rien sans `--reset`.
+
 ---
 
 ## Prochaines notions
 
-- Types de l'API générés depuis OpenAPI, et couche d'appels.
-- Liste paginée avec filtres (conversion page ↔ offset) et TanStack Query.
+- Formulaire de création et de modification, avec les erreurs 422 par champ.
+- Page de détail avec les contacts, puis extraction d'une offre avec relecture.
 - Authentification et limitation de débit avant tout déploiement.

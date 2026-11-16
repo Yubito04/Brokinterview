@@ -648,6 +648,66 @@ la version 7 (l'ancienne API JavaScript du compilateur a disparu). Je veux une s
 TypeScript dans le projet, donc je suis resté en 5.9.3 et j'ai noté dans le backlog de revenir
 à 7 quand l'outil le supportera.
 
+### Pourquoi mettre les filtres dans l'URL plutôt que dans l'état du composant ?
+
+**Réponse modèle.** L'URL devient la source de vérité : la page se recharge, se partage, se
+met en favori, et le bouton Précédent restaure l'état. Avec un `useState`, tout est perdu au
+rechargement. Contrepartie : l'URL est modifiable à la main, donc chaque paramètre est relu
+strictement avec une valeur par défaut (`page=abc` → page 1, statut inconnu → pas de filtre).
+
+### Quand utiliser `push` et quand `replace` pour changer l'URL ?
+
+**Réponse modèle.** `push` ajoute une entrée à l'historique : pour une vraie navigation
+(changer de page ou de statut). `replace` remplace l'entrée courante : pour la recherche, sinon
+chaque lettre tapée laisserait une entrée et « Précédent » défairait la frappe lettre par
+lettre ; et pour une correction automatique (page trop grande ramenée à la dernière), sinon
+« Précédent » reboucle sur la page invalide.
+
+### Pourquoi un debounce sur la recherche, et quel piège évites-tu ?
+
+**Réponse modèle.** Sans lui, chaque lettre déclenche une requête (a, ac, acm, acme) : charge
+inutile, réponses qui arrivent dans le désordre. Avec 300 ms de pause, une seule requête part.
+Le piège : le champ garde un brouillon et l'URL est la source de vérité ; si l'URL se met à
+jour avec « ab » pendant que l'utilisateur a déjà tapé « abc », le champ ne doit pas être
+écrasé. Je mémorise la dernière valeur envoyée et je ne recopie l'URL dans le champ que si elle
+vient d'ailleurs (bouton Retour).
+
+### Comment convertis-tu la page en offset, et que se passe-t-il aux limites ?
+
+**Réponse modèle.** `offset = (page - 1) × limit`, `totalPages = max(1, ceil(total / limit))` :
+le `max(1, …)` évite « page 1 sur 0 » sur une liste vide. Une page au-delà de la dernière
+(URL modifiée, lignes supprimées ailleurs) est ramenée à la dernière avec `replace`, sauf
+pendant qu'on affiche des données d'un chargement précédent, qui appartiennent à d'autres
+filtres. Ces règles sont des fonctions pures testées (total 0, multiple exact, page hors
+bornes).
+
+### À quoi sert `keepPreviousData` dans TanStack Query ?
+
+**Réponse modèle.** La clé de requête contient les filtres : en changer lance une nouvelle
+requête, et sans précaution la liste disparaît le temps du chargement. `keepPreviousData` garde
+l'ancienne réponse affichée ; `isPlaceholderData` indique qu'elle est périmée, pour montrer un
+indicateur discret et éviter d'agir dessus. J'ai aussi mis `retry: false` : les erreurs sont
+déjà traduites par mon client, les rejouer retarderait leur affichage.
+
+### Pourquoi tes tests React cherchent-ils par rôle et par nom ?
+
+**Réponse modèle.** C'est la recommandation de Testing Library : chercher comme un utilisateur
+ou un lecteur d'écran (« le bouton nommé Page suivante »). Le test résiste aux changements de
+style ou de structure, et il échoue si un `<label>` ou un nom accessible manque : il protège
+l'accessibilité. Un sélecteur par classe CSS casse au moindre refactoring et ne vérifie rien
+sur ce que voit l'utilisateur. J'utilise un faux backend qui filtre et découpe des données :
+les vraies URL demandées sont vérifiées, sans réseau.
+
+### Ton écran affichait « API injoignable » alors que le serveur répondait : que s'est-il passé ?
+
+**Réponse modèle.** Ma base de développement n'avait pas la dernière migration : chaque requête
+levait une erreur SQL, donc une 500. Cette 500 d'exception non gérée est fabriquée par la couche
+la plus extérieure de Starlette, au-dessus du middleware CORS : elle n'a pas d'en-tête
+`Access-Control-Allow-Origin`, le navigateur bloque la lecture et `fetch` échoue comme une
+panne réseau. Correctifs : `alembic upgrade head` après chaque migration (dans le README) et,
+en backlog, un middleware attrape-tout placé à l'intérieur du CORS pour renvoyer une 500 JSON
+avec les bons en-têtes, plus un test qui le vérifie.
+
 ---
 
 ## Déploiement

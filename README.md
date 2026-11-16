@@ -25,10 +25,19 @@ at the end.
 
 ```powershell
 cd backend
+.venv\Scripts\python.exe -m alembic upgrade head
 .venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8765
 ```
 
 The API is then available at http://127.0.0.1:8765 (interactive docs at `/docs`).
+
+`alembic upgrade head` brings the database schema up to date. **Run it again after every
+new migration** (for example after pulling new code): the code expects the new columns, and
+a database that lacks them makes every request fail with a 500 error.
+
+To fill the development database with fictional demo data (30 applications and a few
+contacts), run `.venv\Scripts\python.exe -m scripts.seed_demo`. It refuses to run on a
+database whose name ends with `_test`, and deletes nothing unless you add `--reset`.
 
 **Why port 8765?** On the development machine Windows refuses to let the app listen
 on the default port 8000 (error 10013, "access forbidden", usually a port range
