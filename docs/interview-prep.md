@@ -883,6 +883,32 @@ ces essais a révélé un test insuffisant (l'annulation passait sans interrompr
 
 ---
 
+## Limites à admettre
+
+Une limite reconnue avant qu'on la découvre montre du jugement. Pour chacune : la dire, dire pourquoi
+elle existe, dire ce que je ferais.
+
+| Limite | Comment la dire | Où c'est écrit |
+|--------|-----------------|----------------|
+| **Ni authentification ni limite d'appels** | « Quiconque atteint l'API peut lire les données et dépenser la clé d'IA. Je ne le mettrais pas en ligne tel quel : comptes, quota d'extraction et plafond chez le fournisseur d'abord. » | ADR 006, 013 |
+| **L'évaluation de l'IA est petite** | « 4 offres, 3 passages chacune : assez pour trouver des défauts (un « Docker » inventé, un poste instable), pas pour donner un taux de réussite. » | ADR 006 |
+| **Le poste et la date limite sont instables** | « C'est pourquoi l'écran avertit de les revérifier et que rien n'est enregistré sans relecture. » | ADR 006, 012 |
+| **La défense contre l'injection de prompt est une atténuation** | « Balises, prompt, aucun outil pour le modèle, affichage en texte, relecture humaine : cela réduit le risque, cela ne le supprime pas. Mon essai sur une offre piégée est une observation, pas une preuve. » | ADR 006, 012 |
+| **Les compétences extraites ne sont pas stockées** | « Il n'y a pas de colonne ; elles aident la relecture, puis sont perdues. C'est au backlog, avec l'idée d'une page de statistiques. » | ADR 012, backlog |
+| **Annuler une extraction n'arrête pas la facture** | « Annuler arrête l'attente côté navigateur ; le serveur peut finir l'appel et le payer. » | ADR 012 |
+| **L'accessibilité n'est pas vérifiée avec un vrai lecteur d'écran** | « Mes tests cherchent par rôle et par nom, ce qui attrape beaucoup d'erreurs ; ils ne prouvent pas ce qui est réellement annoncé. NVDA reste à essayer. » | ADR 010, 011, 012, backlog |
+| **Les sélecteurs de date natifs suivent la langue du navigateur** | « Le libellé et les erreurs suivent l'application, pas le calendrier. Un composant maison le réglerait, au prix d'un composant accessible à maintenir. » | ADR 010, 011 |
+| **Supprimer un contact est immédiat** | « Choix assumé pour une donnée mineure ; une annulation de quelques secondes est au backlog. » | ADR 011 |
+| **Modifications concurrentes : le dernier gagne** | « Il n'y a pas de numéro de version. Je le ferais avec un 409 si deux sessions étaient possibles. » | ADR 011, backlog |
+| **Une erreur 500 non gérée ressemble à une panne réseau** | « Elle sort sans en-têtes CORS, donc le navigateur la bloque. Le correctif est identifié (un middleware à l'intérieur du CORS) et testable. » | backlog |
+| **Un test a échoué une fois sans cause démontrée** | « Je ne l'ai pas reproduit sur 40 lancements ; j'ai écrit l'hypothèse et la règle (ne rien modifier pendant les tests, garder la sortie complète), sans prétendre l'avoir résolu. » | backlog |
+| **Le typage natif d'i18next a été remplacé par `useT`** | « Il refusait mes clés ; mon hook garde la vérification des clés mais plus celle des variables, compensée par le test de parité. » | ADR 009 |
+| **TypeScript est bloqué en 5.9** | « Un outil de génération de types plante avec la version 7. » | ADR 008 |
+| **Pas de déploiement, pas d'intégration continue** | « Tout tourne en local ; la règle « tests verts avant de commiter » repose sur ma discipline. Le plan est dans l'ADR 013, proposé. » | ADR 013 |
+| **Pagination par `offset`, recherche `ILIKE '%x%'`** | « Suffisant pour un suivi personnel ; je passerais à un curseur et à un index de recherche si les volumes le demandaient. » | questions API et base de données |
+
+---
+
 ## Déploiement
 
 *(à compléter plus tard : Docker, variables d'environnement en production, migrations au déploiement, CI)*
