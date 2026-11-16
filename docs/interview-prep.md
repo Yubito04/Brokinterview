@@ -513,7 +513,8 @@ les logs pour ne rien révéler. Le reste de l'API n'est pas affecté.
 ### Comment maîtrises-tu le coût ?
 
 **Réponse modèle.** Texte d'entrée limité à 20 000 caractères (`422` au-delà), `max_tokens`
-borné, petit modèle, effort bas, délai maximal de 30 secondes et deux reprises au plus. Les
+borné, petit modèle, effort bas, et des délais bornés (5 s de connexion et 15 s de lecture par
+tentative, une seule reprise : environ 41 s au pire, voir la question sur les délais). Les
 tests payants sont exclus par défaut.
 
 **Limite à admettre.** Il n'y a ni authentification ni limitation de débit : en production,

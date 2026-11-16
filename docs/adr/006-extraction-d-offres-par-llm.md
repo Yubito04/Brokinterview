@@ -60,7 +60,8 @@ champs, ce qu'une expression régulière ferait mal car les offres n'ont aucun f
   (notre serveur va bien, le service amont a échoué). Le détail reste dans les logs, il
   n'est jamais renvoyé au client.
 - **Coût borné** : texte limité à 20 000 caractères (`422` au-delà, ou si vide),
-  `max_tokens=4096`, `timeout=30 s`, `max_retries=2`.
+  `max_tokens=4096`, `timeout=30 s`, `max_retries=2` (**valeurs remplacées le 2026-11-11** :
+  voir « Budget de temps et erreur 504 » plus bas, qui donne les valeurs actuelles).
 - **Clé optionnelle** : sans `ANTHROPIC_API_KEY`, l'application démarre quand même ; seul
   cet endpoint répond `503`. La clé est passée explicitement au client, car
   pydantic-settings lit `.env` sans remplir `os.environ`.
