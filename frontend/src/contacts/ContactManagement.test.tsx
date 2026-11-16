@@ -203,6 +203,16 @@ describe('adding a contact', () => {
     ])
   })
 
+  it('has no native validation: the browser bubbles are off, and no native required', async () => {
+    fakeBackend()
+    const user = renderPage()
+    await user.click(await screen.findByRole('button', { name: 'Ajouter un contact' }))
+
+    const form = screen.getByRole('textbox', { name: /Nom/ }).closest('form')!
+    expect(form.noValidate).toBe(true)
+    expect(form.querySelectorAll('[required]')).toHaveLength(0)
+  })
+
   it('shows an empty name under the field, in French, and keeps what was typed', async () => {
     fakeBackend()
     const user = renderPage()
