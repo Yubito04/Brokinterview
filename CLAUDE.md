@@ -32,6 +32,9 @@ Je suis étudiant en fin de baccalauréat en informatique (niveau junior).
   Je dois pouvoir l'expliquer ligne par ligne.
 - Ajoute des commentaires uniquement là où le "pourquoi" n'est pas évident.
 - Chaque fonctionnalité est accompagnée de tests pytest.
+- Avant toute mutation volontaire (vérifier qu'un test échoue quand on casse le code),
+  commiter les fichiers concernés. Après la mutation, restaurer avec `git checkout` et
+  vérifier que `git diff` est vide. Ne jamais muter un fichier non commité.
 
 ## Après chaque tâche
 1. Explique le code produit : ce que fait chaque partie, pourquoi elle est écrite
