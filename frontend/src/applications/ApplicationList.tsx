@@ -1,4 +1,5 @@
 import type { Application } from '../api/applications'
+import { useTranslation } from 'react-i18next'
 import { formatDeadline } from './formatDeadline'
 import { useT } from '../i18n/useT'
 
@@ -10,6 +11,7 @@ type Props = {
 
 export function ApplicationList({ applications, stale = false }: Props) {
   const t = useT()
+  const { i18n } = useTranslation()
   return (
     <table aria-busy={stale} className={`w-full text-left ${stale ? 'opacity-60' : ''}`}>
       <caption className="sr-only">{t('table.caption')}</caption>
@@ -29,7 +31,7 @@ export function ApplicationList({ applications, stale = false }: Props) {
             <td className="py-2 pr-4">{application.position}</td>
             <td className="py-2 pr-4">{t(`status.${application.status}`)}</td>
             <td className="py-2 pr-4">{application.location ?? '—'}</td>
-            <td className="py-2">{formatDeadline(application.deadline)}</td>
+            <td className="py-2">{formatDeadline(application.deadline, i18n.language)}</td>
           </tr>
         ))}
       </tbody>

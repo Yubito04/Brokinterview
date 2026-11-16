@@ -111,7 +111,7 @@ describe('ApplicationsPage', () => {
       expect(within(acme).getByRole('cell', { name: 'Developer' })).toBeInTheDocument()
       expect(within(acme).getByRole('cell', { name: 'Entretien' })).toBeInTheDocument()
       expect(within(acme).getByRole('cell', { name: 'Paris' })).toBeInTheDocument()
-      expect(within(acme).getByRole('cell', { name: '20/11/2026' })).toBeInTheDocument()
+      expect(within(acme).getByRole('cell', { name: '20 nov. 2026' })).toBeInTheDocument()
       // Missing location and deadline show a dash, not "null".
       const globex = within(table).getByRole('row', { name: /Globex/ })
       expect(within(globex).getAllByRole('cell', { name: '—' })).toHaveLength(2)

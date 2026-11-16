@@ -24,7 +24,7 @@ function answerWith(total: number) {
             position: 'Developer',
             status: 'INTERVIEW',
             location: null,
-            deadline: null,
+            deadline: '2026-11-20',
             created_at: '2026-11-01T10:00:00Z',
           },
         ]
@@ -94,6 +94,7 @@ describe('language of the interface', () => {
     const user = renderApp('/', 'fr')
     const frenchTable = await screen.findByRole('table', { name: 'Liste des candidatures' })
     expect(within(frenchTable).getByRole('cell', { name: 'Entretien' })).toBeInTheDocument()
+    expect(within(frenchTable).getByRole('cell', { name: '20 nov. 2026' })).toBeInTheDocument()
 
     await user.selectOptions(languageSelect(), 'English')
 
@@ -101,6 +102,8 @@ describe('language of the interface', () => {
     const table = screen.getByRole('table', { name: 'Applications list' })
     expect(within(table).getByRole('columnheader', { name: 'Company' })).toBeInTheDocument()
     expect(within(table).getByRole('cell', { name: 'Interview' })).toBeInTheDocument()
+    // The date follows the language too, with no new request.
+    expect(within(table).getByRole('cell', { name: 'Nov 20, 2026' })).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Status' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'All statuses' })).toBeInTheDocument()
     expect(screen.getByRole('searchbox', { name: /Search/ })).toBeInTheDocument()
