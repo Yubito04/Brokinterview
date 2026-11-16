@@ -1,6 +1,13 @@
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 from pydantic_core import PydanticCustomError
 
 from app.models import ApplicationStatus, ContactState
@@ -19,6 +26,34 @@ def reject_null_fields(model: BaseModel, *names: str) -> None:
             raise PydanticCustomError(
                 "null_not_allowed", "{field} cannot be null", {"field": name}
             )
+
+
+# Stable error codes for the contact dates rule: the frontend translates them by code.
+REPLY_WITHOUT_CONTACT = "reply_without_contact"
+REPLY_BEFORE_CONTACT = "reply_before_contact"
+REPLY_DATE_MESSAGES = {
+    REPLY_WITHOUT_CONTACT: "A reply needs a contact date",
+    REPLY_BEFORE_CONTACT: "The reply cannot be earlier than the contact",
+}
+
+
+def _as_utc(value: datetime) -> datetime:
+    # A date sent without a timezone ("2026-11-01T10:00:00") is read as UTC, the
+    # convention of the whole API. Comparing a naive and an aware datetime would raise
+    # a TypeError, so both are made aware first.
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value
+
+
+def reply_date_error(contacted_at: datetime | None, replied_at: datetime | None) -> str | None:
+    """The code of what is wrong with the two dates, or None if they are consistent."""
+    if replied_at is None:
+        return None
+    if contacted_at is None:
+        return REPLY_WITHOUT_CONTACT
+    # Strictly earlier is an error: a reply at the very same instant is accepted.
+    if _as_utc(replied_at) < _as_utc(contacted_at):
+        return REPLY_BEFORE_CONTACT
+    return None
 
 
 class ApplicationCreate(BaseModel):
@@ -72,6 +107,20 @@ class ContactCreate(BaseModel):
     contacted_at: datetime | None = None
     replied_at: datetime | None = None
 
+    # A field validator (not a model one) so that the error is attached to the field
+    # `replied_at` ("loc": ["body", "replied_at"]) and shown under it. It runs after
+    # contacted_at, which is declared first; if that one was invalid it is absent from
+    # info.data and its own error is the one reported.
+    @field_validator("replied_at")
+    @classmethod
+    def check_reply_date(cls, value: datetime | None, info: ValidationInfo):
+        if "contacted_at" not in info.data:
+            return value
+        code = reply_date_error(info.data["contacted_at"], value)
+        if code:
+            raise PydanticCustomError(code, REPLY_DATE_MESSAGES[code])
+        return value
+
 
 class ContactUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
@@ -80,7 +129,8 @@ class ContactUpdate(BaseModel):
 
     @model_validator(mode="after")
     def check_required_fields(self):
-        # contacted_at and replied_at are optional: null clears them.
+        # contacted_at and replied_at are optional: null clears them. Their consistency
+        # needs the saved contact, so it is checked in the endpoint, not here.
         reject_null_fields(self, "name")
         return self
 

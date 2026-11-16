@@ -1,11 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi.exceptions import RequestValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_session
 from app.models import Contact
 from app.routers.applications import get_application_or_404
-from app.schemas import ContactCreate, ContactRead, ContactUpdate
+from app.schemas import (
+    REPLY_DATE_MESSAGES,
+    ContactCreate,
+    ContactRead,
+    ContactUpdate,
+    reply_date_error,
+)
 
 router = APIRouter(tags=["contacts"])
 
@@ -15,6 +22,32 @@ def get_contact_or_404(contact_id: int, session: Session) -> Contact:
     if contact is None:
         raise HTTPException(status_code=404, detail="Contact not found")
     return contact
+
+
+def check_reply_dates_after_update(contact: Contact, data: ContactUpdate) -> None:
+    # The PATCH only carries the fields sent, so the rule is checked on the MERGED state:
+    # what the contact will be once the update is applied. Sending only replied_at is
+    # compared with the contact date already saved.
+    sent = data.model_fields_set
+    # Only when the update touches a date: a contact whose dates were already
+    # inconsistent (saved before this rule) can still be renamed.
+    if not sent & {"contacted_at", "replied_at"}:
+        return
+    contacted_at = data.contacted_at if "contacted_at" in sent else contact.contacted_at
+    replied_at = data.replied_at if "replied_at" in sent else contact.replied_at
+    code = reply_date_error(contacted_at, replied_at)
+    if code:
+        # Same shape as Pydantic's own 422, so the client handles it the same way.
+        raise RequestValidationError(
+            [
+                {
+                    "type": code,
+                    "loc": ("body", "replied_at"),
+                    "msg": REPLY_DATE_MESSAGES[code],
+                    "input": None,
+                }
+            ]
+        )
 
 
 # A contact only exists inside an application, so it is created under its URL.
@@ -53,6 +86,7 @@ def update_contact(
     contact_id: int, data: ContactUpdate, session: Session = Depends(get_session)
 ):
     contact = get_contact_or_404(contact_id, session)
+    check_reply_dates_after_update(contact, data)
     # Null on a date clears it; null on the name was already rejected (422).
     for field, value in data.model_dump(exclude_unset=True).items():
         setattr(contact, field, value)

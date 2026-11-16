@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 CONTACTED = "2026-11-01T10:00:00Z"
 REPLIED = "2026-11-03T15:30:00Z"
 
@@ -171,3 +173,163 @@ def test_deleting_an_application_deletes_its_contacts(client):
     client.delete(f"/applications/{application['id']}")
 
     assert client.patch(f"/contacts/{contact['id']}", json={"name": "X"}).status_code == 404
+
+
+# --- consistency of the two dates ---
+
+EARLIER = "2026-10-30T08:00:00Z"
+
+
+def only_error(response):
+    assert response.status_code == 422
+    [error] = response.json()["detail"]
+    return error
+
+
+def test_create_reply_without_contact_returns_422_on_replied_at(client):
+    application = create_application(client)
+
+    error = only_error(create_contact(client, application["id"], replied_at=REPLIED))
+
+    assert error["type"] == "reply_without_contact"
+    assert error["loc"] == ["body", "replied_at"]
+
+
+def test_create_reply_before_contact_returns_422_on_replied_at(client):
+    application = create_application(client)
+
+    error = only_error(
+        create_contact(client, application["id"], contacted_at=CONTACTED, replied_at=EARLIER)
+    )
+
+    assert error["type"] == "reply_before_contact"
+    assert error["loc"] == ["body", "replied_at"]
+
+
+def test_create_reply_at_the_same_instant_is_accepted(client):
+    application = create_application(client)
+
+    response = create_contact(
+        client, application["id"], contacted_at=CONTACTED, replied_at=CONTACTED
+    )
+
+    assert response.status_code == 201
+    assert response.json()["state"] == "REPLIED"
+
+
+def test_create_dates_without_timezone_are_read_as_utc(client):
+    application = create_application(client)
+
+    same_instant = create_contact(
+        client,
+        application["id"],
+        contacted_at="2026-11-01T10:00:00",
+        replied_at="2026-11-01T10:00:00Z",
+    )
+    earlier = create_contact(
+        client,
+        application["id"],
+        contacted_at="2026-11-01T10:00:00Z",
+        replied_at="2026-11-01T09:59:59",
+    )
+
+    assert same_instant.status_code == 201
+    assert only_error(earlier)["type"] == "reply_before_contact"
+
+
+def test_create_with_an_invalid_contact_date_reports_only_that_date(client):
+    application = create_application(client)
+
+    error = only_error(
+        create_contact(client, application["id"], contacted_at="abc", replied_at=REPLIED)
+    )
+
+    assert error["loc"] == ["body", "contacted_at"]
+
+
+def test_patch_reply_before_the_saved_contact_date_returns_422(client):
+    application = create_application(client)
+    contact = create_contact(client, application["id"], contacted_at=CONTACTED).json()
+
+    response = client.patch(f"/contacts/{contact['id']}", json={"replied_at": EARLIER})
+
+    error = only_error(response)
+    assert error["type"] == "reply_before_contact"
+    assert error["loc"] == ["body", "replied_at"]
+
+
+def test_patch_reply_on_a_contact_never_contacted_returns_422(client):
+    application = create_application(client)
+    contact = create_contact(client, application["id"]).json()
+
+    response = client.patch(f"/contacts/{contact['id']}", json={"replied_at": REPLIED})
+
+    assert only_error(response)["type"] == "reply_without_contact"
+
+
+def test_patch_contact_date_moved_after_the_saved_reply_returns_422(client):
+    application = create_application(client)
+    contact = create_contact(
+        client, application["id"], contacted_at=CONTACTED, replied_at=REPLIED
+    ).json()
+
+    response = client.patch(
+        f"/contacts/{contact['id']}", json={"contacted_at": "2026-11-20T10:00:00Z"}
+    )
+
+    assert only_error(response)["type"] == "reply_before_contact"
+
+
+def test_patch_clearing_the_contact_date_while_a_reply_remains_returns_422(client):
+    application = create_application(client)
+    contact = create_contact(
+        client, application["id"], contacted_at=CONTACTED, replied_at=REPLIED
+    ).json()
+
+    response = client.patch(f"/contacts/{contact['id']}", json={"contacted_at": None})
+
+    assert only_error(response)["type"] == "reply_without_contact"
+
+
+def test_patch_clearing_both_dates_together_is_accepted(client):
+    application = create_application(client)
+    contact = create_contact(
+        client, application["id"], contacted_at=CONTACTED, replied_at=REPLIED
+    ).json()
+
+    response = client.patch(
+        f"/contacts/{contact['id']}", json={"contacted_at": None, "replied_at": None}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["state"] == "NOT_CONTACTED"
+
+
+def test_patch_rejected_by_the_rule_changes_nothing(client):
+    application = create_application(client)
+    contact = create_contact(client, application["id"], contacted_at=CONTACTED).json()
+
+    client.patch(f"/contacts/{contact['id']}", json={"name": "Bob", "replied_at": EARLIER})
+
+    saved = client.get(f"/applications/{application['id']}/contacts").json()[0]
+    assert saved["name"] == "Alice"
+    assert saved["replied_at"] is None
+
+
+def test_patch_that_touches_no_date_does_not_check_old_inconsistent_data(client, session):
+    # A contact saved before the rule existed, with a reply and no contact date.
+    from app.models import Contact
+
+    application = create_application(client)
+    legacy = Contact(
+        application_id=application["id"],
+        name="Legacy",
+        replied_at=datetime(2026, 11, 3, tzinfo=UTC),
+    )
+    session.add(legacy)
+    session.commit()
+
+    response = client.patch(f"/contacts/{legacy.id}", json={"name": "Renamed"})
+
+    assert response.status_code == 200
+    assert response.json()["name"] == "Renamed"
