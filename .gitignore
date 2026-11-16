@@ -7,7 +7,7 @@ __pycache__/
 # Secrets
 .env
 
-# Frontend (later)
+# Frontend
 node_modules/
 dist/
 

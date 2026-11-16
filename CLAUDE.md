@@ -7,8 +7,9 @@ Je suis étudiant en fin de baccalauréat en informatique (niveau junior).
 
 ## Stack
 - Backend : Python 3.15, FastAPI, Pydantic, SQLAlchemy, Alembic, PostgreSQL
-- Frontend (plus tard) : React + TypeScript (Vite)
-- Tests : pytest
+- Frontend : React + TypeScript (Vite), Tailwind CSS, TanStack Query, React Router,
+  i18next (interface bilingue français / anglais), dans `frontend/`
+- Tests : pytest (backend), Vitest + React Testing Library (frontend)
 - Environnement : Windows, venv dans backend/.venv
   (utiliser backend\.venv\Scripts\python.exe pour les commandes Python)
 
@@ -31,7 +32,7 @@ Je suis étudiant en fin de baccalauréat en informatique (niveau junior).
 - Écris du code simple et lisible, sans astuces inutiles.
   Je dois pouvoir l'expliquer ligne par ligne.
 - Ajoute des commentaires uniquement là où le "pourquoi" n'est pas évident.
-- Chaque fonctionnalité est accompagnée de tests pytest.
+- Chaque fonctionnalité est accompagnée de tests (pytest côté backend, Vitest côté frontend).
 - Avant toute mutation volontaire (vérifier qu'un test échoue quand on casse le code),
   commiter les fichiers concernés. Après la mutation, restaurer avec `git checkout` et
   vérifier que `git diff` est vide. Ne jamais muter un fichier non commité.
