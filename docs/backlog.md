@@ -93,4 +93,14 @@ Pistes d'amélioration identifiées, pas encore réalisées.
   message (même principe que la zone « Mise à jour… », déjà toujours présente). Vérifier avec un
   vrai lecteur d'écran (NVDA), pas seulement avec les tests par rôle.
 
+- **Tests instables dans `ApplicationFormPages.test.tsx` : cause non démontrée.** Sur environ
+  25 lancements complets, deux tests ont échoué une fois chacun (« clic double » puis
+  « création et confirmation »), puis ont repassé ; une boucle de 15 lancements n'a rien
+  reproduit, et l'erreur exacte n'a pas été relevée. **Hypothèse, non vérifiée :** le délai
+  d'attente par défaut de `findBy*`/`waitFor` (1 s) est dépassé sur une machine chargée. Le
+  passage à 3 s (`asyncUtilTimeout`, `src/test/setup.ts`) peut masquer le problème sans le
+  régler. Si un test échoue à nouveau : relever le message exact avant de relancer, puis
+  chercher la vraie cause (course entre une requête simulée et une mise à jour, état partagé
+  entre tests, minuteur). Revenir ensuite à 1 s si la cause est autre.
+
 Contexte (extraction) : [ADR 006](adr/006-extraction-d-offres-par-llm.md), section « Évaluation réelle ».

@@ -608,6 +608,19 @@ déjà remplie n'est pas toujours annoncée. C'est la raison de la zone « Mise 
 présente sur la liste, et la limite connue de la confirmation « Candidature créée. » (au
 backlog). Les tests par rôle ne le détectent pas : seul un vrai lecteur d'écran le montre.
 
+## 70. Un test instable (« flaky ») et pourquoi c'est dangereux
+
+Un test instable réussit ou échoue **sans que le code ait changé**. Les causes habituelles : une
+course entre deux opérations asynchrones (la requête simulée répond avant ou après le clic), un
+minuteur réel (`setTimeout` de 50 ms) comparé à la vitesse de la machine, un état partagé entre
+tests, un délai d'attente trop court sur une machine chargée. Le danger est double. D'abord, on
+apprend à **relancer sans lire** : le jour où le test échoue pour une vraie raison, on le
+relance aussi, et un vrai bogue passe. Ensuite, il détruit la confiance : si un rouge peut être
+« normal », plus personne ne regarde. Règles : relever l'erreur exacte au premier échec, avant
+de relancer ; remplacer les minuteurs par un événement contrôlé par le test (ici, le faux
+serveur attend `release()`) ; ne pas « réparer » en allongeant un délai sans avoir démontré que
+c'était la cause, car cela peut masquer le problème (entrée au backlog).
+
 ---
 
 ## Prochaines notions
