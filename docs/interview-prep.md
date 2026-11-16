@@ -708,6 +708,39 @@ panne réseau. Correctifs : `alembic upgrade head` après chaque migration (dans
 en backlog, un middleware attrape-tout placé à l'intérieur du CORS pour renvoyer une 500 JSON
 avec les bons en-têtes, plus un test qui le vérifie.
 
+### Si l'utilisateur change vite de filtre, comment évites-tu qu'une vieille réponse écrase la nouvelle ?
+
+**Réponse modèle.** Chaque réponse est rangée dans le cache sous la clé de sa requête
+(`['applications', {status, q, page}]`), et l'écran lit toujours la clé courante : une réponse
+tardive à un ancien filtre est rangée sous son ancienne clé et n'est jamais affichée à la place
+de la nouvelle. Changer de clé annule aussi la requête précédente (`signal`, donc
+`AbortController`), ce qui économise du réseau. **Limite à admettre :** l'annulation coupe la
+connexion côté navigateur, mais le serveur peut quand même finir sa requête ; et je n'ai testé
+ce scénario qu'avec un faux backend, pas avec des réponses réellement inversées dans le temps.
+
+### Pourquoi une pagination par offset, et quelles sont ses limites ?
+
+**Réponse modèle.** `limit`/`offset` est simple, permet d'aller directement à la page N, et
+donne un `total` pour afficher « Page 2 sur 3 ». Pour une liste personnelle de quelques dizaines
+ou centaines de candidatures, c'est le bon compromis. Limites : si des lignes sont ajoutées ou
+supprimées entre deux requêtes, une ligne peut apparaître deux fois ou être sautée ; et un
+`OFFSET` très grand oblige PostgreSQL à parcourir puis jeter les lignes sautées. L'alternative
+est la pagination par curseur (keyset) : « les 20 suivantes après (created_at, id) ». Mon tri
+`created_at` décroissant puis `id` décroissant est déjà déterministe, ce qui la rendrait
+possible plus tard. **Limite à admettre :** je ne l'ai pas mesurée sur un gros volume.
+
+### Quels états l'écran liste gère-t-il, et comment as-tu pensé à l'accessibilité ?
+
+**Réponse modèle.** Cinq états : chargement initial, erreur (avec bouton « Réessayer »), liste
+vide sans filtre (« aucune candidature »), liste vide avec filtres (« aucun résultat pour ces
+filtres »), et rechargement avec anciennes données gardées. Les deux messages vides sont
+distincts, car ils appellent deux actions différentes (créer une candidature, ou changer les
+filtres). Côté accessibilité : un `<label>` lié à chaque champ, une `<nav aria-label>` avec des
+boutons nommés, un tableau avec `<caption>` et `<th scope>`, `role="alert"` pour l'erreur,
+`role="status"` toujours présent pour « Mise à jour… », `aria-busy` pendant le rechargement.
+**Limite à admettre :** je l'ai vérifié avec des tests par rôle et par nom, pas avec un vrai
+lecteur d'écran ni un outil d'audit comme axe.
+
 ---
 
 ## Déploiement

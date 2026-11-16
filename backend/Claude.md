@@ -38,8 +38,8 @@ Je suis étudiant en fin de baccalauréat en informatique (niveau junior).
    ainsi, et quelles alternatives ont été écartées.
 2. Relie le code aux concepts généraux (REST, validation, ORM, injection
    de dépendances, etc.) pour que je puisse en parler hors de ce projet.
-3. Donne-moi 3 questions qu'un recruteur pourrait poser sur cette partie,
-   attends mes réponses, puis corrige-les.
+3. Ajoute 3 questions de recruteur avec réponses modèles dans docs/interview-prep.md
+   (pas de quiz interactif : n'attends pas de réponses de ma part).
 4. Mets à jour la documentation (voir ci-dessous).
 5. Propose un message de commit au format Conventional Commits
    (feat:, fix:, test:, docs:, refactor:, chore:).
