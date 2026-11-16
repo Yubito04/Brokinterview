@@ -39,6 +39,9 @@ Je suis étudiant en fin de baccalauréat en informatique (niveau junior).
   complète de chaque lancement dans un fichier (pas de filtre `grep` sur le seul affichage) :
   sans le message exact d'un échec, on ne peut pas en chercher la cause. Au premier échec,
   s'arrêter et montrer ce message avant de relancer.
+- Ne commiter que si la sortie enregistrée de la suite de tests ne contient ni échec ni
+  « no tests » : vérifier ce résultat avant de commiter, pas dans la même commande qui commite
+  sans le lire (un test qui ne se charge plus passerait pour une suite verte).
 
 ## Après chaque tâche
 1. Explique le code produit : ce que fait chaque partie, pourquoi elle est écrite
