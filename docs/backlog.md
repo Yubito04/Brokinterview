@@ -102,5 +102,13 @@ Pistes d'amélioration identifiées, pas encore réalisées.
   régler. Si un test échoue à nouveau : relever le message exact avant de relancer, puis
   chercher la vraie cause (course entre une requête simulée et une mise à jour, état partagé
   entre tests, minuteur). Revenir ensuite à 1 s si la cause est autre.
+  **Mesures du 2026-11-16 :** un troisième échec (même test « création et confirmation ») est
+  survenu après le passage à 3 s, mais seul le nom du test a été relevé (sortie filtrée), pas le
+  message. 20 lancements complets de `a1423e2` : 0 échec ; 20 lancements avec le refactor
+  `useServerErrors` : 0 échec. **Hypothèse à vérifier :** les échecs seraient liés à une
+  modification de fichier pendant l'exécution de la suite (le seul échec enregistré n'a pas
+  eu lieu sur les 40 lancements sans modification). Réserve : l'enchaînement des commandes de ce
+  lancement n'indique pas de modification simultanée ; l'hypothèse n'est donc pas démontrée.
+  Règle ajoutée au `CLAUDE.md` : ne rien modifier pendant les tests, garder la sortie complète.
 
 Contexte (extraction) : [ADR 006](adr/006-extraction-d-offres-par-llm.md), section « Évaluation réelle ».

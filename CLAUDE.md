@@ -35,6 +35,10 @@ Je suis étudiant en fin de baccalauréat en informatique (niveau junior).
 - Avant toute mutation volontaire (vérifier qu'un test échoue quand on casse le code),
   commiter les fichiers concernés. Après la mutation, restaurer avec `git checkout` et
   vérifier que `git diff` est vide. Ne jamais muter un fichier non commité.
+- Ne jamais modifier un fichier pendant que les tests tournent, et enregistrer la sortie
+  complète de chaque lancement dans un fichier (pas de filtre `grep` sur le seul affichage) :
+  sans le message exact d'un échec, on ne peut pas en chercher la cause. Au premier échec,
+  s'arrêter et montrer ce message avant de relancer.
 
 ## Après chaque tâche
 1. Explique le code produit : ce que fait chaque partie, pourquoi elle est écrite
