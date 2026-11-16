@@ -267,7 +267,7 @@ The model can be wrong, and the posting is untrusted text (it may contain instru
 the model). That is why the screen shows the result for review and saves nothing by itself. The
 evaluation on real postings is in [ADR 006](docs/adr/006-extraction-d-offres-par-llm.md).
 
-By default the tests use a fake extractor and a mocked HTTP layer: no network, no cost. Two tests
+By default the tests use a fake extractor and a mocked HTTP layer: no network, no cost. Three tests
 call the real model and run only on request:
 
 ```powershell

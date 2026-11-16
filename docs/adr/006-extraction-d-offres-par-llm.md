@@ -71,8 +71,8 @@ champs, ce qu'une expression régulière ferait mal car les offres n'ont aucun f
 ## Conséquences
 
 - (+) Réponse toujours conforme au schéma, ou une erreur claire.
-- (+) Tests gratuits, rapides et répétables (faux extracteur, couche HTTP simulée). Deux
-  tests marqués `live_llm` appellent le vrai modèle et ne tournent que sur demande
+- (+) Tests gratuits, rapides et répétables (faux extracteur, couche HTTP simulée). Des
+  tests marqués `live_llm` (trois aujourd'hui) appellent le vrai modèle et ne tournent que sur demande
   (`pytest -m live_llm`).
 - (+) Changer de modèle ou de fournisseur ne touche ni la route ni ses tests.
 - (−) Chaque appel coûte de l'argent et dépend d'un service externe : latence et pannes.

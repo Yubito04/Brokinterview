@@ -496,7 +496,7 @@ je change une variable, pas du code.
 **Réponse modèle.** À trois niveaux. Les tests de route utilisent un faux extracteur
 injecté avec `dependency_overrides` : gratuits et déterministes. Les tests de
 `llm.py` simulent la couche HTTP pour déclencher de vrais cas d'erreur du SDK (429, 500,
-réseau coupé, refus, réponse hors schéma). Enfin, deux tests appellent le vrai modèle ;
+réseau coupé, refus, réponse hors schéma). Enfin, trois tests appellent le vrai modèle ;
 ils sont marqués `live_llm` et exclus par défaut car ils coûtent de l'argent.
 
 **Limite à admettre.** Les faux ne prouvent pas que le prompt donne de bons résultats : seuls
