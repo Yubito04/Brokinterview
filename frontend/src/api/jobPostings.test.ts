@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import openapiText from '../../../backend/openapi.json?raw'
 import { EXTRACTION_TIMEOUT_MS, createApiClient } from './client'
 import { ApiError } from './errors'
 import { MAX_POSTING_LENGTH, extractJobPosting } from './jobPostings'
@@ -45,8 +46,11 @@ describe('extractJobPosting', () => {
     expect(JSON.parse(init.body as string)).toEqual({ text: '  text with spaces \n' })
   })
 
-  it('mirrors the size limit of the API', () => {
-    expect(MAX_POSTING_LENGTH).toBe(20_000)
+  it('mirrors the size limit declared in the API contract (backend/openapi.json)', () => {
+    const spec = JSON.parse(openapiText) as {
+      components: { schemas: { JobPostingText: { properties: { text: { maxLength: number } } } } }
+    }
+    expect(MAX_POSTING_LENGTH).toBe(spec.components.schemas.JobPostingText.properties.text.maxLength)
   })
 
   it('waits up to 60 seconds, not the default 10', async () => {
