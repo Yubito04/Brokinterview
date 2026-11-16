@@ -45,6 +45,8 @@ type Options = {
 function fakeBackend({ extractions = [FOUND], holdExtraction = false }: Options = {}) {
   const created: Application[] = []
   const sent: Sent[] = []
+  // The abort signal given to each extraction call: it tells whether the wait was really stopped.
+  const signals: (AbortSignal | undefined)[] = []
   let call = 0
   let release: () => void = () => {}
   const gate = new Promise<void>((resolve) => {
@@ -60,6 +62,7 @@ function fakeBackend({ extractions = [FOUND], holdExtraction = false }: Options 
       sent.push({ method, path: url.pathname, body })
 
       if (url.pathname === '/job-postings/extract') {
+        signals.push(init?.signal ?? undefined)
         if (holdExtraction) {
           // Gives up when the caller cancels, like a real fetch.
           await Promise.race([
@@ -96,7 +99,7 @@ function fakeBackend({ extractions = [FOUND], holdExtraction = false }: Options 
   )
 
   const extractCalls = () => sent.filter((request) => request.path === '/job-postings/extract')
-  return { sent, created, extractCalls, release: () => release() }
+  return { sent, created, extractCalls, signals, release: () => release() }
 }
 
 function renderPage(language: Language = 'fr', url = '/applications/import') {
@@ -246,6 +249,8 @@ describe('while the AI is working', () => {
     expect(liveRegion()).toHaveTextContent('')
     // Cancelling is not a way to send a second paid call by accident: still one call.
     expect(backend.extractCalls()).toHaveLength(1)
+    // And the wait itself was really stopped (not only hidden): the request was aborted.
+    expect(backend.signals[0]?.aborted).toBe(true)
   })
 })
 
