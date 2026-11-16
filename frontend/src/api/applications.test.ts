@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createApiClient } from './client'
-import { listApplications, parseStatus } from './applications'
+import { ApiError } from './errors'
+import {
+  createApplication,
+  getApplication,
+  listApplications,
+  parseStatus,
+  updateApplication,
+} from './applications'
 
 function clientAnswering(body: unknown) {
   const fetchFn = vi.fn().mockResolvedValue(
@@ -69,5 +76,74 @@ describe('listApplications', () => {
     const answer = { items: [], total: 45, limit: 20, offset: 40 }
     const { client } = clientAnswering(answer)
     expect(await listApplications(client, { page: 3 })).toEqual(answer)
+  })
+})
+
+const SAVED = {
+  id: 7,
+  company: 'Acme',
+  position: 'Developer',
+  status: 'APPLIED',
+  location: null,
+  deadline: null,
+  created_at: '2026-11-01T10:00:00Z',
+}
+
+function sentRequest(fetchFn: ReturnType<typeof vi.fn>) {
+  const [url, init] = fetchFn.mock.calls[0] as [string, RequestInit]
+  return { url: new URL(url), method: init.method, body: JSON.parse(init.body as string) }
+}
+
+describe('getApplication', () => {
+  it('reads one application by id', async () => {
+    const { client, fetchFn } = clientAnswering(SAVED)
+    expect(await getApplication(client, 7)).toEqual(SAVED)
+    expect(calledUrl(fetchFn).pathname).toBe('/applications/7')
+  })
+})
+
+describe('createApplication', () => {
+  it('posts the body as JSON and returns the saved application', async () => {
+    const { client, fetchFn } = clientAnswering(SAVED)
+    const result = await createApplication(client, { company: 'Acme', position: 'Developer', status: 'APPLIED' })
+    expect(result).toEqual(SAVED)
+    const sent = sentRequest(fetchFn)
+    expect(sent.method).toBe('POST')
+    expect(sent.url.pathname).toBe('/applications')
+    expect(sent.body).toEqual({ company: 'Acme', position: 'Developer', status: 'APPLIED' })
+  })
+
+  it('exposes the 422 issues by field, with their code', async () => {
+    const detail = [
+      { type: 'string_too_short', loc: ['body', 'company'], msg: 'x', ctx: { min_length: 1 } },
+    ]
+    const fetchFn = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ detail }), {
+        status: 422,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    const client = createApiClient({ baseUrl: 'http://api.test', fetchFn })
+
+    const error = await createApplication(client, { company: '', position: 'x', status: 'APPLIED' }).catch(
+      (caught: unknown) => caught,
+    )
+
+    expect(error).toBeInstanceOf(ApiError)
+    expect((error as ApiError).fieldErrors.company).toMatchObject({
+      type: 'string_too_short',
+      ctx: { min_length: 1 },
+    })
+  })
+})
+
+describe('updateApplication', () => {
+  it('patches only what it is given, and null stays null', async () => {
+    const { client, fetchFn } = clientAnswering(SAVED)
+    await updateApplication(client, 7, { status: 'OFFER', location: null })
+    const sent = sentRequest(fetchFn)
+    expect(sent.method).toBe('PATCH')
+    expect(sent.url.pathname).toBe('/applications/7')
+    expect(sent.body).toEqual({ status: 'OFFER', location: null })
   })
 })

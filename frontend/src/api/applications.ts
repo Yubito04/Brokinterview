@@ -5,6 +5,9 @@ import { PAGE_SIZE, pageToOffset } from '../applications/pagination'
 export type Application = components['schemas']['ApplicationRead']
 export type ApplicationPage = components['schemas']['ApplicationPage']
 export type ApplicationStatus = components['schemas']['ApplicationStatus']
+export type ApplicationCreate = components['schemas']['ApplicationCreate']
+// PATCH body: only the fields present are changed, and null clears an optional one.
+export type ApplicationUpdate = components['schemas']['ApplicationUpdate']
 
 // Typed as the generated union: if the backend adds a status, this line stops compiling.
 export const APPLICATION_STATUSES: readonly ApplicationStatus[] = [
@@ -41,4 +44,26 @@ export function listApplications(
     },
     signal,
   })
+}
+
+export function getApplication(
+  client: ApiClient,
+  id: number,
+  signal?: AbortSignal,
+): Promise<Application> {
+  return client.request<Application>(`/applications/${id}`, { signal })
+}
+
+// No retry, no signal: a write that was sent may have been applied even if the answer
+// was lost, so repeating or cancelling it blindly could create a duplicate.
+export function createApplication(client: ApiClient, body: ApplicationCreate): Promise<Application> {
+  return client.request<Application>('/applications', { method: 'POST', body })
+}
+
+export function updateApplication(
+  client: ApiClient,
+  id: number,
+  body: ApplicationUpdate,
+): Promise<Application> {
+  return client.request<Application>(`/applications/${id}`, { method: 'PATCH', body })
 }
