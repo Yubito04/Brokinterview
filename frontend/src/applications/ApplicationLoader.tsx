@@ -34,7 +34,7 @@ type Props = {
 // The part the detail page and the edit page have in common: read the id from the URL,
 // load that application, and show the right message while it is loading, missing or
 // failing. The cache key ['application', id] is shared, so going from the detail to the
-// edit page does not load it twice.
+// edit page shows it at once from the cache (it is still refreshed in the background).
 export function ApplicationLoader({ children }: Props) {
   const t = useT()
   const id = parseId(useParams().id)

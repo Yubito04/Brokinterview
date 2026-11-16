@@ -29,7 +29,11 @@ export function ApplicationList({ applications, stale = false }: Props) {
       <tbody>
         {applications.map((application) => (
           <tr key={application.id} className="border-b border-gray-200">
-            <th scope="row" className="py-2 pr-4 font-medium">{application.company}</th>
+            <th scope="row" className="py-2 pr-4 font-medium">
+              <Link to={`/applications/${application.id}`} className="underline">
+                {application.company}
+              </Link>
+            </th>
             <td className="py-2 pr-4">{application.position}</td>
             <td className="py-2 pr-4">{t(`status.${application.status}`)}</td>
             <td className="py-2 pr-4">{application.location ?? '—'}</td>

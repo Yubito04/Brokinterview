@@ -49,6 +49,26 @@ export const fr = {
     editShort: 'Modifier',
   },
   // The create / edit form.
+  detail: {
+    edit: 'Modifier',
+  },
+  contacts: {
+    title: 'Contacts',
+    caption: 'Contacts de la candidature',
+    loading: 'Chargement des contacts…',
+    loadError: 'Impossible de charger les contacts : {{reason}}',
+    empty: 'Aucun contact pour cette candidature.',
+    name: 'Nom',
+    state: 'État',
+    contactedAt: 'Contacté le',
+    repliedAt: 'Réponse le',
+  },
+  // The API's contact states (NOT_CONTACTED...) are shown through these texts.
+  contactState: {
+    NOT_CONTACTED: 'Pas encore contacté',
+    WAITING: 'En attente de réponse',
+    REPLIED: 'A répondu',
+  },
   notice: {
     created: 'Candidature créée.',
     updated: 'Candidature modifiée.',

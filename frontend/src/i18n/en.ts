@@ -44,6 +44,25 @@ export const en: Messages = {
     edit: 'Edit {{company}}',
     editShort: 'Edit',
   },
+  detail: {
+    edit: 'Edit',
+  },
+  contacts: {
+    title: 'Contacts',
+    caption: 'Contacts of the application',
+    loading: 'Loading the contacts…',
+    loadError: 'Could not load the contacts: {{reason}}',
+    empty: 'No contact for this application.',
+    name: 'Name',
+    state: 'State',
+    contactedAt: 'Contacted on',
+    repliedAt: 'Replied on',
+  },
+  contactState: {
+    NOT_CONTACTED: 'Not contacted yet',
+    WAITING: 'Waiting for a reply',
+    REPLIED: 'Replied',
+  },
   notice: {
     created: 'Application created.',
     updated: 'Application updated.',
