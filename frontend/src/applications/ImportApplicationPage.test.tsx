@@ -174,8 +174,9 @@ describe('extracting the fields of a posting', () => {
 
     await user.click(extractButton())
 
+    // The description is the privacy note, then the error: both are read, the error last.
     expect(await screen.findByRole('textbox', { name: "Texte de l'offre" })).toHaveAccessibleDescription(
-      "Collez le texte d'une offre.",
+      /Collez le texte d'une offre\.$/,
     )
     expect(postingBox()).toHaveFocus()
     expect(backend.extractCalls()).toHaveLength(1)
@@ -324,7 +325,7 @@ describe('when the extraction fails', () => {
     await user.click(extractButton())
 
     expect(await screen.findByRole('textbox', { name: "Texte de l'offre" })).toHaveAccessibleDescription(
-      'Trop long (maximum : 20000).',
+      /Trop long \(maximum : 20000\)\.$/,
     )
     // Nothing was cut by the browser: the whole text is still there.
     expect((postingBox() as HTMLTextAreaElement).value).toHaveLength(20_050)
@@ -647,5 +648,78 @@ describe('corrections made by hand', () => {
 
     expect(screen.getByRole('group', { name: 'Replace your corrections?' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Keep my corrections' })).toHaveFocus()
+  })
+})
+
+describe('the posting text box', () => {
+  // Intl puts a no-break space between thousands in French: compare with a plain space.
+  const plain = (text: string | null) => (text ?? '').replace(/[  ]/g, ' ')
+  const counter = () => screen.getByText(/caractères$|characters$/, { selector: 'p' })
+
+  it('says before anything is sent that the text goes to an AI service, linked to the box', () => {
+    fakeBackend()
+    renderPage()
+    expect(postingBox()).toHaveAccessibleDescription(
+      /envoyé à un service d'IA.*Ne collez pas d'informations que vous ne voulez pas partager/,
+    )
+  })
+
+  it('says it in English too', () => {
+    fakeBackend()
+    renderPage('en')
+    expect(screen.getByRole('textbox', { name: 'Job posting text' })).toHaveAccessibleDescription(
+      /sent to an AI service/,
+    )
+  })
+
+  it('counts the characters as they are typed, against the limit', async () => {
+    fakeBackend()
+    const user = renderPage()
+    expect(plain(counter().textContent)).toBe('0 / 20 000 caractères')
+
+    await user.click(postingBox())
+    await user.paste('Acme recrute')
+
+    expect(plain(counter().textContent)).toBe('12 / 20 000 caractères')
+  })
+
+  it('counts in English with the English number format', async () => {
+    fakeBackend()
+    const user = renderPage('en')
+    await user.click(screen.getByRole('textbox', { name: 'Job posting text' }))
+    await user.paste('Acme')
+    expect(plain(counter().textContent)).toBe('4 / 20,000 characters')
+  })
+
+  it('counts an emoji once, like the server', async () => {
+    fakeBackend()
+    const user = renderPage()
+    await user.click(postingBox())
+    await user.paste('a😀b')
+    expect(plain(counter().textContent)).toBe('3 / 20 000 caractères')
+  })
+
+  it('warns, in a live region that exists beforehand, only once the limit is crossed', async () => {
+    fakeBackend()
+    const user = renderPage()
+    // The region is there and empty from the start, so that its change is announced.
+    expect(liveRegion()).toHaveTextContent('')
+    const warnings = () => screen.getAllByRole('status').map((region) => region.textContent).join('')
+    await user.click(postingBox())
+    await user.paste('x'.repeat(20_000))
+    expect(warnings()).not.toContain('Trop long')
+
+    await user.type(postingBox(), 'y')
+
+    expect(warnings()).toContain('Trop long : le serveur refusera ce texte')
+    expect(plain(counter().textContent)).toBe('20 001 / 20 000 caractères')
+  })
+
+  it('does not block the button: the server decides, and its answer is clear', async () => {
+    fakeBackend()
+    const user = renderPage()
+    await user.click(postingBox())
+    await user.paste('x'.repeat(20_001))
+    expect(extractButton()).toBeEnabled()
   })
 })

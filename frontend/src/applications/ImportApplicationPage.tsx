@@ -1,8 +1,9 @@
 import { useMutation } from '@tanstack/react-query'
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router'
 import { api } from '../api'
-import { extractJobPosting } from '../api/jobPostings'
+import { MAX_POSTING_LENGTH, extractJobPosting } from '../api/jobPostings'
 import { useT } from '../i18n/useT'
 import { ApplicationForm } from './ApplicationForm'
 import { ErrorSummary } from './ErrorSummary'
@@ -14,6 +15,7 @@ import {
 } from './extractionReview'
 import { TextAreaField } from './fields'
 import type { FormValues } from './formValues'
+import { countCharacters, isTooLong } from './postingText'
 import { useCreateApplication } from './useCreateApplication'
 import { useServerErrors } from './useServerErrors'
 
@@ -59,6 +61,7 @@ function notFoundHints(notFound: ExtractedField[], text: string) {
 
 export function ImportApplicationPage() {
   const t = useT()
+  const { i18n } = useTranslation()
   const navigate = useNavigate()
   const [text, setText] = useState('')
   const [reviewed, setReviewed] = useState<Reviewed | null>(null)
@@ -93,6 +96,10 @@ export function ImportApplicationPage() {
   useEffect(() => {
     if (askingOverwrite) keepButton.current?.focus()
   }, [askingOverwrite])
+
+  const count = countCharacters(text)
+  const tooLong = isTooLong(text)
+  const formatNumber = (value: number) => new Intl.NumberFormat(i18n.language).format(value)
 
   function handleExtract(event: FormEvent) {
     event.preventDefault()
@@ -143,7 +150,17 @@ export function ImportApplicationPage() {
             value={text}
             onChange={setText}
             error={fieldError('text')}
+            hint={t('import.privacy')}
           />
+
+          {/* The counter is plain text, not a live region: announcing every keystroke
+              would be noise. Only crossing the limit is announced (the region below). */}
+          <p className={`text-sm ${tooLong ? 'text-red-700' : 'text-gray-600'}`}>
+            {t('import.counter', { count: formatNumber(count), max: formatNumber(MAX_POSTING_LENGTH) })}
+          </p>
+          <p role="status" className="min-h-5 text-sm text-red-700">
+            {tooLong ? t('import.tooLong', { max: formatNumber(MAX_POSTING_LENGTH) }) : ''}
+          </p>
 
           <div className="flex gap-3">
             {/* Disabled while waiting: every extraction is a paid call, so a second click

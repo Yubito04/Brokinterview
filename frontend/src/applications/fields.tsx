@@ -82,15 +82,24 @@ type TextAreaFieldProps = {
   rows?: number
   required?: boolean
   error?: string
+  hint?: string
 }
 
 // No `maxLength` here, on purpose: a browser silently CUTS a pasted text that is too long,
 // and the user would send a posting without its end without knowing. Without the limit,
 // the whole text stays, and the server's "too long" answer (before any paid call) tells
 // the user what is wrong.
-export function TextAreaField({ label, value, onChange, rows = 10, required, error }: TextAreaFieldProps) {
+export function TextAreaField({
+  label,
+  value,
+  onChange,
+  rows = 10,
+  required,
+  error,
+  hint,
+}: TextAreaFieldProps) {
   return (
-    <FormField label={label} required={required} error={error}>
+    <FormField label={label} required={required} error={error} hint={hint}>
       {(control) => (
         <textarea
           {...control}
