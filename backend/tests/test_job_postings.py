@@ -92,7 +92,13 @@ def test_extract_saves_nothing(client, use_extractor, session):
 def test_empty_or_blank_text_returns_422(client, use_extractor, text):
     fake = use_extractor(FakeJobExtractor(FULL_RESULT))
 
-    assert extract(client, text).status_code == 422
+    response = extract(client, text)
+
+    assert response.status_code == 422
+    # A stable code on the field `text`: the frontend translates it, not the English message.
+    [error] = response.json()["detail"]
+    assert error["type"] == "text_blank"
+    assert error["loc"] == ["body", "text"]
     assert fake.calls == []  # the model is never called for invalid input
 
 

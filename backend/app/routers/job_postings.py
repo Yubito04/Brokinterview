@@ -2,6 +2,7 @@ from datetime import date
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator
+from pydantic_core import PydanticCustomError
 
 from app.llm import ExtractedJob, JobExtractor, get_job_extractor
 
@@ -18,7 +19,10 @@ class JobPostingText(BaseModel):
     @classmethod
     def text_must_not_be_blank(cls, value: str) -> str:
         if not value.strip():
-            raise ValueError("text cannot be empty")
+            # A custom error with its own code (a plain ValueError would be reported as
+            # the generic "value_error"): the client reads `text_blank` and shows its
+            # own translated message under the field.
+            raise PydanticCustomError("text_blank", "text cannot be empty")
         return value
 
 
