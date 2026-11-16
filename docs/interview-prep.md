@@ -911,4 +911,43 @@ elle existe, dire ce que je ferais.
 
 ## Déploiement
 
-*(à compléter plus tard : Docker, variables d'environnement en production, migrations au déploiement, CI)*
+**État honnête : le projet n'est pas déployé.** Tout tourne en local. Dire qu'on sait ce qui manque
+vaut mieux que prétendre le contraire.
+
+**Ce qui existe déjà** : toute la configuration vient de variables d'environnement (`.env` ignoré par
+Git, jamais de secret dans le code ni dans une variable `VITE_*`), le schéma se crée et se modifie par
+migrations versionnées, le CORS est configurable, le contrat de l'API est généré et vérifié par un
+test, et les tests tournent contre une vraie base.
+
+**Ce qui manque** : authentification, limite d'appels, conteneurs, intégration continue, HTTPS,
+sauvegardes. Le plan, les options et la liste de contrôle sont dans
+[l'ADR 013](adr/013-deploiement-et-securite.md) (statut : proposé).
+
+### Comment déploierais-tu cette application ?
+
+**Réponse modèle.** Je conteneuriserais le backend, je construirais le frontend en fichiers statiques
+et je les servirais derrière HTTPS, avec une base PostgreSQL gérée ou un conteneur avec sauvegardes.
+Les secrets viendraient de l'environnement de la plateforme, et le CORS de production ne listerait
+que l'origine publique. Mais **avant** de le mettre en ligne, j'ajouterais l'authentification et la
+limitation de l'extraction, car sinon n'importe qui pourrait dépenser la clé d'IA.
+
+### Comment appliques-tu les migrations au déploiement ?
+
+**Réponse modèle.** Avant de démarrer la nouvelle version du code, dans une étape de déploiement
+distincte : le code attend les nouvelles colonnes, et une base qui n'a pas la migration fait échouer
+chaque requête (je l'ai vu en développement, avec des erreurs 500). Pour qu'une version puisse rester
+en ligne pendant la migration, je ferais des changements en deux temps (ajouter la colonne, puis
+changer le code, puis retirer l'ancien). **Limite :** je ne l'ai pas encore pratiqué en production.
+
+### Où mets-tu les secrets en production ?
+
+**Réponse modèle.** Dans les variables d'environnement de la plateforme ou un gestionnaire de secrets,
+jamais dans le dépôt ni dans les journaux, et jamais dans le frontend : tout ce qui est dans une
+variable `VITE_*` est copié dans le code du navigateur, donc public. J'ajouterais un plafond de
+dépense chez le fournisseur d'IA, indépendant de mon code, pour limiter les dégâts d'une fuite.
+
+### À quoi servirait l'intégration continue ici ?
+
+**Réponse modèle.** À lancer à chaque envoi `pytest` (avec un service PostgreSQL), le test du contrat
+OpenAPI, puis `lint`, `check:api`, les tests et le build du frontend. Aujourd'hui, la règle « ne pas
+commiter sans tests verts » ne repose que sur ma discipline ; la CI la rendrait automatique.
