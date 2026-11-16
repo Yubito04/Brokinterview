@@ -109,6 +109,7 @@ describe('describeIssue (Pydantic codes read from the real API)', () => {
     ['date_from_datetime_inexact', {}, 'Date invalide (format AAAA-MM-JJ).', 'Invalid date (format YYYY-MM-DD).'],
     ['reply_without_contact', {}, 'Une réponse suppose une date de contact.', 'A reply needs a contact date.'],
     ['reply_before_contact', {}, 'La réponse ne peut pas précéder le contact.', 'The reply cannot be earlier than the contact.'],
+    ['text_blank', {}, "Collez le texte d'une offre.", 'Paste the text of a job posting.'],
     ['datetime_from_date_parsing', { error: 'input is too short' }, 'Date et heure invalides.', 'Invalid date and time.'],
   ])('%s', (type, ctx, french, english) => {
     expect(describeIssue(issue(type, ctx), fr)).toBe(french)

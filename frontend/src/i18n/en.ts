@@ -130,6 +130,7 @@ export const en: Messages = {
     unknownChoice: 'This value is not in the list.',
     replyWithoutContact: 'A reply needs a contact date.',
     replyBeforeContact: 'The reply cannot be earlier than the contact.',
+    textBlank: 'Paste the text of a job posting.',
     invalidDate: 'Invalid date (format YYYY-MM-DD).',
     invalidDateTime: 'Invalid date and time.',
     invalid: 'Invalid value.',

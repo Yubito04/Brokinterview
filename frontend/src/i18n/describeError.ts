@@ -35,6 +35,7 @@ const ISSUE_TEXTS: Record<string, IssueText> = {
   // Codes of our own backend (contact dates), not Pydantic's.
   reply_without_contact: { key: 'validation.replyWithoutContact' },
   reply_before_contact: { key: 'validation.replyBeforeContact' },
+  text_blank: { key: 'validation.textBlank' },
   // The codes below were read from the real API's answers, not guessed: a malformed
   // date string is "date_from_datetime_parsing", for example.
   date_from_datetime_parsing: { key: 'validation.invalidDate' },

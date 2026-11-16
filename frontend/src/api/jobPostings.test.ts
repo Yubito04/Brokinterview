@@ -107,9 +107,9 @@ describe('extractJobPosting', () => {
   })
 
   it('reports a text refused by the API (422) by field', async () => {
-    const detail = [{ type: 'value_error', loc: ['body', 'text'], msg: 'Value error, text cannot be empty', ctx: {} }]
+    const detail = [{ type: 'text_blank', loc: ['body', 'text'], msg: 'text cannot be empty' }]
     const { client } = clientAnswering(422, { detail })
     const error = await extractJobPosting(client, '   ').catch((caught: unknown) => caught)
-    expect((error as ApiError).fieldErrors.text).toMatchObject({ type: 'value_error' })
+    expect((error as ApiError).fieldErrors.text).toMatchObject({ type: 'text_blank' })
   })
 })

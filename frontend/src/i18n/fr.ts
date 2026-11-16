@@ -139,6 +139,7 @@ export const fr = {
     unknownChoice: "Cette valeur n'est pas dans la liste.",
     replyWithoutContact: 'Une réponse suppose une date de contact.',
     replyBeforeContact: 'La réponse ne peut pas précéder le contact.',
+    textBlank: "Collez le texte d'une offre.",
     invalidDate: 'Date invalide (format AAAA-MM-JJ).',
     invalidDateTime: 'Date et heure invalides.',
     invalid: 'Valeur invalide.',
