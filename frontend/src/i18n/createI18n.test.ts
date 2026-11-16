@@ -1,11 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createI18n, setLanguage } from './createI18n'
 import { readStoredLanguage, storeLanguage } from './languageStorage'
-
-const RESOURCES = {
-  fr: { translation: { hello: 'Bonjour', count: '{{count}} éléments' } },
-  en: { translation: { hello: 'Hello', count: '{{count}} items' } },
-}
+import { resources as RESOURCES } from './resources'
 
 function browserSpeaks(...languages: string[]) {
   vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(languages)
@@ -43,18 +39,18 @@ describe('createI18n', () => {
     browserSpeaks('fr-CA', 'en')
     const i18n = createI18n(RESOURCES)
     expect(i18n.language).toBe('fr')
-    expect(i18n.t('hello')).toBe('Bonjour')
+    expect(i18n.t('pagination.next')).toBe('Page suivante')
   })
 
   it('starts in the stored language, even against the browser', () => {
     browserSpeaks('fr-CA')
     storeLanguage('en')
-    expect(createI18n(RESOURCES).t('hello')).toBe('Hello')
+    expect(createI18n(RESOURCES).t('pagination.next')).toBe('Next page')
   })
 
   it('falls back to English for an unsupported browser', () => {
     browserSpeaks('de-DE')
-    expect(createI18n(RESOURCES).t('hello')).toBe('Hello')
+    expect(createI18n(RESOURCES).t('pagination.next')).toBe('Next page')
   })
 
   it('does not store the detected language (only an explicit choice is stored)', () => {
@@ -69,8 +65,9 @@ describe('createI18n', () => {
   })
 
   it('fills in variables', () => {
-    expect(createI18n(RESOURCES, 'en').t('count', { count: 3 })).toBe('3 items')
-    expect(createI18n(RESOURCES, 'fr').t('count', { count: 3 })).toBe('3 éléments')
+    const values = { page: 2, total: 3 }
+    expect(createI18n(RESOURCES, 'en').t('pagination.position', values)).toBe('Page 2 of 3')
+    expect(createI18n(RESOURCES, 'fr').t('pagination.position', values)).toBe('Page 2 sur 3')
   })
 
   it('shows the key itself for a missing translation (no silent fallback to another language)', () => {
@@ -84,7 +81,7 @@ describe('setLanguage', () => {
 
     await setLanguage(i18n, 'en')
 
-    expect(i18n.t('hello')).toBe('Hello')
+    expect(i18n.t('pagination.next')).toBe('Next page')
     expect(readStoredLanguage()).toBe('en')
     expect(document.documentElement.lang).toBe('en')
   })
