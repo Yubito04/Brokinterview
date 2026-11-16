@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { I18nextProvider } from 'react-i18next'
 import { createMemoryRouter, RouterProvider } from 'react-router'
@@ -42,10 +42,12 @@ function contact(id: number, overrides: Partial<Contact> = {}): Contact {
   }
 }
 
-type Fake = { contacts?: Contact[]; contactsFailFirst?: boolean }
+type Fake = { contacts?: Contact[]; contactsFailFirst?: boolean; globexContacts?: Contact[] }
+
+const GLOBEX: Application = { ...ACME, id: 2, company: 'Globex' }
 
 // A tiny fake backend: the list, one application, and its contacts.
-function fakeBackend({ contacts = [], contactsFailFirst = false }: Fake = {}) {
+function fakeBackend({ contacts = [], contactsFailFirst = false, globexContacts = [] }: Fake = {}) {
   let failures = contactsFailFirst ? 1 : 0
   const requested: string[] = []
   vi.stubGlobal(
@@ -57,6 +59,8 @@ function fakeBackend({ contacts = [], contactsFailFirst = false }: Fake = {}) {
         return json({ items: [ACME], total: 1, limit: 20, offset: 0 })
       }
       if (url.pathname === '/applications/1') return json(ACME)
+      if (url.pathname === '/applications/2') return json(GLOBEX)
+      if (url.pathname === '/applications/2/contacts') return json(globexContacts)
       if (url.pathname === '/applications/1/contacts') {
         if (failures > 0) {
           failures -= 1
@@ -79,7 +83,7 @@ function renderAt(url: string, language: Language = 'fr') {
       </QueryClientProvider>
     </I18nextProvider>,
   )
-  return userEvent.setup()
+  return { router, user: userEvent.setup() }
 }
 
 beforeEach(() => {
@@ -96,7 +100,7 @@ afterEach(() => {
 describe('application detail page', () => {
   it('opens from the company name in the list and shows the application', async () => {
     fakeBackend()
-    const user = renderAt('/')
+    const { user } = renderAt('/')
 
     await user.click(await screen.findByRole('link', { name: 'Acme' }))
 
@@ -145,7 +149,7 @@ describe('application detail page', () => {
     fakeBackend({
       contacts: [contact(2, { name: 'Bob', state: 'WAITING', contacted_at: '2026-11-10T10:00:00Z' })],
     })
-    const user = renderAt('/applications/1')
+    const { user } = renderAt('/applications/1')
     await screen.findByRole('table', { name: 'Contacts de la candidature' })
 
     await user.selectOptions(screen.getByRole('combobox', { name: 'Langue / Language' }), 'English')
@@ -159,7 +163,7 @@ describe('application detail page', () => {
 
   it('keeps the application visible when only the contacts fail, and retries', async () => {
     fakeBackend({ contacts: [contact(1, { name: 'Alice' })], contactsFailFirst: true })
-    const user = renderAt('/applications/1')
+    const { user } = renderAt('/applications/1')
 
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent('Impossible de charger les contacts')
@@ -188,7 +192,7 @@ describe('application detail page', () => {
 
   it('leads to the edit form and back to the list', async () => {
     fakeBackend()
-    const user = renderAt('/applications/1')
+    const { user } = renderAt('/applications/1')
 
     await user.click(await screen.findByRole('link', { name: 'Modifier' }))
     expect(await screen.findByRole('heading', { name: 'Modifier la candidature' })).toBeInTheDocument()
@@ -197,11 +201,25 @@ describe('application detail page', () => {
 
   it('goes back to the list', async () => {
     fakeBackend()
-    const user = renderAt('/applications/1')
+    const { user } = renderAt('/applications/1')
     // The "loading" screen has the same link: wait for the real page, or the click would
     // land on a link that is replaced a moment later.
     await screen.findByRole('heading', { level: 1, name: 'Acme' })
     await user.click(screen.getByRole('link', { name: 'Retour à la liste' }))
     expect(await screen.findByRole('heading', { name: 'Candidatures' })).toBeInTheDocument()
+  })
+
+  it('does not show the contacts of another application after moving to it', async () => {
+    fakeBackend({
+      contacts: [contact(1, { name: 'Alice' })],
+      globexContacts: [contact(9, { name: 'Zoe', application_id: 2 })],
+    })
+    const { router } = renderAt('/applications/1')
+    expect(await screen.findByRole('rowheader', { name: 'Alice' })).toBeInTheDocument()
+
+    await act(() => router.navigate('/applications/2'))
+
+    expect(await screen.findByRole('rowheader', { name: 'Zoe' })).toBeInTheDocument()
+    expect(screen.queryByRole('rowheader', { name: 'Alice' })).not.toBeInTheDocument()
   })
 })
