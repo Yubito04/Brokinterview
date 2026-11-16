@@ -16,6 +16,15 @@ Pistes d'amélioration identifiées, pas encore réalisées.
   échéance globale (route `async` et client asynchrone avec `asyncio.timeout`, ou un plafond
   sur la pause). Voir ADR 006, section « Budget de temps ».
 
+- **Enregistrer les compétences extraites (`skills`).** L'extraction les renvoie, mais aucune
+  colonne ne les stocke : elles sont affichées à la relecture puis perdues. À faire : une
+  colonne (ou une table liée, une compétence pouvant servir à plusieurs candidatures), une
+  migration Alembic, l'API (création, lecture, modification) et le formulaire. Elles pourraient
+  alimenter une future **page de statistiques** (compétences les plus demandées, par statut ou
+  par période). Choix à faire alors : une liste de texte libre (simple, mais « Node », « node.js »
+  et « NodeJS » comptent pour trois) ou une table de compétences normalisées (plus de travail,
+  des comptages fiables).
+
 ## Version 2
 
 - **Importer les candidatures depuis Gmail.** Connexion OAuth en lecture seule, recherche des
