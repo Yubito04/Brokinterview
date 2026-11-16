@@ -16,6 +16,27 @@ Pistes d'amélioration identifiées, pas encore réalisées.
   échéance globale (route `async` et client asynchrone avec `asyncio.timeout`, ou un plafond
   sur la pause). Voir ADR 006, section « Budget de temps ».
 
+## Version 2
+
+- **Importer les candidatures depuis Gmail.** Connexion OAuth en lecture seule, recherche des
+  e-mails de confirmation de candidature, extraction avec le service existant (`/job-postings`),
+  puis **file de validation humaine** : rien n'est enregistré sans qu'une personne ait relu et
+  accepté chaque candidature proposée. **Prérequis : l'authentification** (sans comptes, il n'y a
+  personne à qui rattacher un jeton Gmail). Points à traiter avant de commencer :
+  - **Jeton Gmail** : chiffré côté serveur (jamais en clair en base, jamais renvoyé au
+    navigateur), avec une révocation possible.
+  - **Restrictions de Google** : lire Gmail est un accès « restreint » ; en production il
+    demande une vérification de l'application (et un audit de sécurité). Pour un usage
+    personnel, le mode test de l'écran de consentement OAuth suffit (utilisateurs de test
+    déclarés, jeton expirant au bout de 7 jours en mode test).
+  - **Données sensibles envoyées au modèle** : des e-mails privés partiraient chez un
+    fournisseur d'IA. Ne transmettre que ce qui est nécessaire (expéditeur, objet, extrait),
+    prévenir l'utilisateur, et ne rien conserver sans son accord.
+  - **Injection de prompt par e-mail** : un e-mail est un texte non fiable ; il peut contenir
+    des instructions destinées au modèle. La sortie du modèle reste une donnée à valider (schéma
+    strict, aucun outil ni action déclenchés par le modèle) ; la validation humaine est le dernier
+    filet.
+
 ## Frontend (ADR 008)
 
 - **Repasser à TypeScript 7.** Le projet est en TypeScript 5.9.3 car `openapi-typescript`
