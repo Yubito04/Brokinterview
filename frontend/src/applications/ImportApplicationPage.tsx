@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { api } from '../api'
 import { extractJobPosting } from '../api/jobPostings'
@@ -7,11 +7,13 @@ import { useT } from '../i18n/useT'
 import { ApplicationForm } from './ApplicationForm'
 import { ErrorSummary } from './ErrorSummary'
 import {
+  hasManualChanges,
   reviewFromExtraction,
   type ExtractedField,
   type ExtractionReview,
 } from './extractionReview'
 import { TextAreaField } from './fields'
+import type { FormValues } from './formValues'
 import { useCreateApplication } from './useCreateApplication'
 import { useServerErrors } from './useServerErrors'
 
@@ -64,6 +66,12 @@ export function ImportApplicationPage() {
   // available to read next to the fields, and to extract again.
   const [textOpen, setTextOpen] = useState(true)
   const controller = useRef<AbortController | null>(null)
+  // What the review form holds right now (it owns its state; it tells us after each change).
+  const currentValues = useRef<FormValues | null>(null)
+  // A new extraction would replace corrections made by hand: ask first.
+  const [askingOverwrite, setAskingOverwrite] = useState(false)
+  const keepButton = useRef<HTMLButtonElement>(null)
+  const extractButton = useRef<HTMLButtonElement>(null)
 
   const extraction = useMutation({
     mutationFn: (posting: string) => {
@@ -71,19 +79,43 @@ export function ImportApplicationPage() {
       return extractJobPosting(api, posting, controller.current.signal)
     },
     onSuccess: (job) => {
-      setReviewed((previous) => ({
-        review: reviewFromExtraction(job),
-        attempt: (previous?.attempt ?? 0) + 1,
-      }))
+      const review = reviewFromExtraction(job)
+      currentValues.current = review.values
+      setReviewed((previous) => ({ review, attempt: (previous?.attempt ?? 0) + 1 }))
       setTextOpen(false)
     },
   })
   const creation = useCreateApplication()
   const { formRef, summaryRef, fieldError, summary } = useServerErrors(extraction.error, FIELD_NAMES)
 
+  // The question opens: the keyboard goes to the SAFE choice (keep), so that a stray Enter
+  // does not throw the user's corrections away.
+  useEffect(() => {
+    if (askingOverwrite) keepButton.current?.focus()
+  }, [askingOverwrite])
+
   function handleExtract(event: FormEvent) {
     event.preventDefault()
+    // Asked BEFORE the request, not after the answer: declining costs nothing.
+    if (reviewed && currentValues.current && hasManualChanges(reviewed.review.values, currentValues.current)) {
+      setAskingOverwrite(true)
+      return
+    }
     extraction.mutate(text)
+  }
+
+  function replaceCorrections() {
+    setAskingOverwrite(false)
+    extraction.mutate(text)
+  }
+
+  function keepCorrections() {
+    setAskingOverwrite(false)
+    extractButton.current?.focus()
+  }
+
+  function handleOverwriteKeyDown(event: KeyboardEvent) {
+    if (event.key === 'Escape') keepCorrections()
   }
 
   // The user stops waiting. The server may still finish the call (and pay for it): this
@@ -117,6 +149,7 @@ export function ImportApplicationPage() {
             {/* Disabled while waiting: every extraction is a paid call, so a second click
                 must not send a second one. */}
             <button
+              ref={extractButton}
               type="submit"
               disabled={extraction.isPending}
               className="rounded bg-blue-700 px-4 py-2 text-white disabled:opacity-60"
@@ -133,6 +166,40 @@ export function ImportApplicationPage() {
               </button>
             )}
           </div>
+
+          {askingOverwrite && (
+            <div
+              role="group"
+              aria-labelledby="overwrite-title"
+              aria-describedby="overwrite-text"
+              onKeyDown={handleOverwriteKeyDown}
+              className="rounded border border-amber-600 p-4"
+            >
+              <h2 id="overwrite-title" className="font-semibold">
+                {t('import.overwriteTitle')}
+              </h2>
+              <p id="overwrite-text" className="mt-1">
+                {t('import.overwriteText')}
+              </p>
+              <div className="mt-3 flex gap-3">
+                <button
+                  type="button"
+                  onClick={replaceCorrections}
+                  className="rounded bg-red-700 px-4 py-2 text-white"
+                >
+                  {t('import.overwriteConfirm')}
+                </button>
+                <button
+                  ref={keepButton}
+                  type="button"
+                  onClick={keepCorrections}
+                  className="rounded border border-gray-400 px-4 py-2"
+                >
+                  {t('import.overwriteKeep')}
+                </button>
+              </div>
+            </div>
+          )}
         </form>
       </details>
 
@@ -152,6 +219,10 @@ export function ImportApplicationPage() {
           hints={notFoundHints(reviewed.review.notFound, t('import.notFound'))}
           error={creation.error}
           saving={creation.isPending}
+          disabled={extraction.isPending}
+          onValuesChange={(values) => {
+            currentValues.current = values
+          }}
           onSubmit={(values) => creation.mutate(values)}
           onCancel={() => void navigate('/')}
         />

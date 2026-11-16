@@ -106,6 +106,10 @@ export const fr = {
     skillsTitle: 'Compétences détectées',
     skillsNone: 'Aucune compétence détectée.',
     skillsNote: 'Affichées pour vous aider à relire : elles ne sont pas enregistrées.',
+    overwriteTitle: 'Remplacer vos corrections ?',
+    overwriteText: "Vous avez modifié des champs à la main. Une nouvelle extraction les remplacera par la nouvelle réponse de l'IA.",
+    overwriteConfirm: 'Remplacer mes corrections',
+    overwriteKeep: 'Garder mes corrections',
   },
   notice: {
     created: 'Candidature créée.',

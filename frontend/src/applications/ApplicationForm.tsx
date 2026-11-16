@@ -21,6 +21,11 @@ type Props = {
   intro?: ReactNode
   // A short note under a field, by field name (the import's "not found in the posting").
   hints?: Partial<Record<'company' | 'position' | 'location' | 'deadline', string>>
+  // Told after every change, so that a parent can know what the user has typed.
+  onValuesChange?: (values: FormValues) => void
+  // The whole form is frozen (fields and buttons), e.g. while a new extraction is running:
+  // what the user types during the wait would be overwritten by the answer.
+  disabled?: boolean
 }
 
 const FIELD_NAMES = ['company', 'position', 'status', 'location', 'deadline']
@@ -36,6 +41,8 @@ export function ApplicationForm({
   embedded = false,
   intro,
   hints,
+  onValuesChange,
+  disabled = false,
 }: Props) {
   const t = useT()
   const [values, setValues] = useState(initialValues)
@@ -46,8 +53,11 @@ export function ApplicationForm({
     onSubmit(values)
   }
 
-  const set = <K extends keyof FormValues>(name: K) => (value: FormValues[K]) =>
-    setValues((current) => ({ ...current, [name]: value }))
+  const set = <K extends keyof FormValues>(name: K) => (value: FormValues[K]) => {
+    const next = { ...values, [name]: value }
+    setValues(next)
+    onValuesChange?.(next)
+  }
 
   const headingId = useId()
   const Wrapper = embedded ? 'section' : 'main'
@@ -65,7 +75,9 @@ export function ApplicationForm({
       {/* noValidate: the browser's own validation bubbles are in the browser's
           language, not the app's. The server's 422 answers, translated, are shown
           under each field instead. */}
-      <form ref={formRef} noValidate onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+      <form ref={formRef} noValidate onSubmit={handleSubmit} className="mt-6">
+        {/* A disabled fieldset freezes every field and button inside it. */}
+        <fieldset disabled={disabled} className="m-0 flex min-w-0 flex-col gap-4 border-0 p-0">
         <ErrorSummary summaryRef={summaryRef} messages={summary} />
 
         <p className="text-sm text-gray-600">{t('form.requiredNote')}</p>
@@ -117,6 +129,7 @@ export function ApplicationForm({
             {t('form.cancel')}
           </button>
         </div>
+        </fieldset>
       </form>
     </Wrapper>
   )

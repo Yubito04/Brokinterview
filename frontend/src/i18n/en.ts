@@ -100,6 +100,10 @@ export const en: Messages = {
     skillsTitle: 'Detected skills',
     skillsNone: 'No skill detected.',
     skillsNote: 'Shown to help you review: they are not saved.',
+    overwriteTitle: 'Replace your corrections?',
+    overwriteText: 'You edited some fields by hand. A new extraction will replace them with the new answer from the AI.',
+    overwriteConfirm: 'Replace my corrections',
+    overwriteKeep: 'Keep my corrections',
   },
   notice: {
     created: 'Application created.',

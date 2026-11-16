@@ -40,9 +40,12 @@ type Options = {
   extractions?: Extraction[]
   // The extraction waits until release() is called (no timer: the test decides).
   holdExtraction?: boolean
+  // Same, but only from the n-th call on (0 = the first one): earlier calls answer at once.
+  holdFromCall?: number
 }
 
-function fakeBackend({ extractions = [FOUND], holdExtraction = false }: Options = {}) {
+function fakeBackend({ extractions = [FOUND], holdExtraction = false, holdFromCall }: Options = {}) {
+  const holdFrom = holdFromCall ?? (holdExtraction ? 0 : Infinity)
   const created: Application[] = []
   const sent: Sent[] = []
   // The abort signal given to each extraction call: it tells whether the wait was really stopped.
@@ -63,7 +66,7 @@ function fakeBackend({ extractions = [FOUND], holdExtraction = false }: Options 
 
       if (url.pathname === '/job-postings/extract') {
         signals.push(init?.signal ?? undefined)
-        if (holdExtraction) {
+        if (call >= holdFrom) {
           // Gives up when the caller cancels, like a real fetch.
           await Promise.race([
             gate,
@@ -485,5 +488,164 @@ describe('the review', () => {
     expect(within(review).getByText('<b>bold</b>')).toBeInTheDocument()
     expect(review.querySelector('b')).toBeNull()
     expect(review.querySelector('img')).toBeNull()
+  })
+})
+
+describe('corrections made by hand', () => {
+  const NEW_ANSWER: ExtractedJob = { ...FOUND, company: 'Globex', position: 'Platform Engineer' }
+  const REVIEW = 'Relecture avant création'
+  const overwriteQuestion = () => screen.queryByRole('group', { name: 'Remplacer vos corrections ?' })
+
+  async function reviewThenOpenTextAgain(user: ReturnType<typeof userEvent.setup>) {
+    await pasteAndExtract(user)
+    await screen.findByRole('region', { name: REVIEW })
+    // The text is folded after an answer: open it to extract again.
+    await user.click(screen.getByText("Texte de l'offre", { selector: 'summary' }))
+  }
+
+  it('asks before replacing what the user corrected, without sending anything yet', async () => {
+    const backend = fakeBackend({ extractions: [FOUND, NEW_ANSWER] })
+    const user = renderPage()
+    await reviewThenOpenTextAgain(user)
+    await user.clear(screen.getByRole('textbox', { name: /Poste/ }))
+    await user.type(screen.getByRole('textbox', { name: /Poste/ }), 'My own title')
+
+    await user.click(extractButton())
+
+    const question = overwriteQuestion()
+    expect(question).toBeInTheDocument()
+    expect(question).toHaveAccessibleDescription(/remplacera/)
+    // The safe choice has the focus, and nothing was sent: declining costs nothing.
+    expect(screen.getByRole('button', { name: 'Garder mes corrections' })).toHaveFocus()
+    expect(backend.extractCalls()).toHaveLength(1)
+    expect(screen.getByRole('textbox', { name: /Poste/ })).toHaveValue('My own title')
+  })
+
+  it('keeps the corrections when the user says so, and gives the focus back to the button', async () => {
+    const backend = fakeBackend({ extractions: [FOUND, NEW_ANSWER] })
+    const user = renderPage()
+    await reviewThenOpenTextAgain(user)
+    await user.type(screen.getByRole('textbox', { name: 'Lieu' }), ' (remote)')
+
+    await user.click(extractButton())
+    await user.click(screen.getByRole('button', { name: 'Garder mes corrections' }))
+
+    expect(overwriteQuestion()).not.toBeInTheDocument()
+    expect(extractButton()).toHaveFocus()
+    expect(screen.getByRole('textbox', { name: 'Lieu' })).toHaveValue('Montreal (remote)')
+    expect(screen.getByRole('textbox', { name: /Entreprise/ })).toHaveValue('Acme')
+    expect(backend.extractCalls()).toHaveLength(1)
+  })
+
+  it('keeps them on Escape too', async () => {
+    const backend = fakeBackend({ extractions: [FOUND, NEW_ANSWER] })
+    const user = renderPage()
+    await reviewThenOpenTextAgain(user)
+    await user.type(screen.getByRole('textbox', { name: 'Lieu' }), '!')
+    await user.click(extractButton())
+
+    await user.keyboard('{Escape}')
+
+    expect(overwriteQuestion()).not.toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Lieu' })).toHaveValue('Montreal!')
+    expect(backend.extractCalls()).toHaveLength(1)
+  })
+
+  it('replaces them with the new answer when the user agrees', async () => {
+    const backend = fakeBackend({ extractions: [FOUND, NEW_ANSWER] })
+    const user = renderPage()
+    await reviewThenOpenTextAgain(user)
+    await user.type(screen.getByRole('textbox', { name: 'Lieu' }), '!')
+    await user.click(extractButton())
+
+    await user.click(screen.getByRole('button', { name: 'Remplacer mes corrections' }))
+
+    await waitFor(() => expect(screen.getByRole('textbox', { name: /Entreprise/ })).toHaveValue('Globex'))
+    expect(screen.getByRole('textbox', { name: /Poste/ })).toHaveValue('Platform Engineer')
+    expect(screen.getByRole('textbox', { name: 'Lieu' })).toHaveValue('Montreal')
+    expect(backend.extractCalls()).toHaveLength(2)
+    expect(overwriteQuestion()).not.toBeInTheDocument()
+  })
+
+  it('does not ask when nothing was changed by hand', async () => {
+    const backend = fakeBackend({ extractions: [FOUND, NEW_ANSWER] })
+    const user = renderPage()
+    await reviewThenOpenTextAgain(user)
+
+    await user.click(extractButton())
+
+    expect(overwriteQuestion()).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('textbox', { name: /Entreprise/ })).toHaveValue('Globex'))
+    expect(backend.extractCalls()).toHaveLength(2)
+  })
+
+  it('does not ask when the user typed a change and then put the original value back', async () => {
+    fakeBackend({ extractions: [FOUND, NEW_ANSWER] })
+    const user = renderPage()
+    await reviewThenOpenTextAgain(user)
+    const location = screen.getByRole('textbox', { name: 'Lieu' })
+    await user.type(location, 'x')
+    await user.type(location, '{Backspace}')
+
+    await user.click(extractButton())
+
+    expect(overwriteQuestion()).not.toBeInTheDocument()
+  })
+
+  it('asks when the user filled in a field the AI had left empty', async () => {
+    fakeBackend({ extractions: [{ ...FOUND, location: null }, NEW_ANSWER] })
+    const user = renderPage()
+    await reviewThenOpenTextAgain(user)
+    await user.type(screen.getByRole('textbox', { name: 'Lieu' }), 'Paris')
+
+    await user.click(extractButton())
+
+    expect(overwriteQuestion()).toBeInTheDocument()
+  })
+
+  it('keeps the corrections when the new extraction fails after the user agreed', async () => {
+    fakeBackend({ extractions: [FOUND, { status: 502, body: { detail: 'x' } }] })
+    const user = renderPage()
+    await reviewThenOpenTextAgain(user)
+    await user.type(screen.getByRole('textbox', { name: 'Lieu' }), '!')
+    await user.click(extractButton())
+
+    await user.click(screen.getByRole('button', { name: 'Remplacer mes corrections' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent("Le service d'IA a échoué")
+    expect(screen.getByRole('textbox', { name: 'Lieu' })).toHaveValue('Montreal!')
+  })
+
+  it('freezes the form while a new extraction runs, so nothing typed during the wait is lost', async () => {
+    // The first call answers at once; the second waits for release().
+    const backend = fakeBackend({ extractions: [FOUND, NEW_ANSWER], holdFromCall: 1 })
+    const user = renderPage()
+    await reviewThenOpenTextAgain(user)
+
+    await user.click(extractButton())
+
+    expect(screen.getByRole('textbox', { name: /Entreprise/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Créer la candidature' })).toBeDisabled()
+
+    backend.release()
+    await waitFor(() => expect(screen.getByRole('textbox', { name: /Entreprise/ })).toHaveValue('Globex'))
+    expect(screen.getByRole('textbox', { name: /Entreprise/ })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Créer la candidature' })).toBeEnabled()
+  })
+
+  it('asks in English too', async () => {
+    fakeBackend({ extractions: [FOUND, NEW_ANSWER] })
+    const user = renderPage('en')
+    await user.click(screen.getByRole('textbox', { name: 'Job posting text' }))
+    await user.paste('Acme is hiring')
+    await user.click(screen.getByRole('button', { name: 'Extract the fields' }))
+    await screen.findByRole('region', { name: 'Review before creating' })
+    await user.click(screen.getByText('Job posting text', { selector: 'summary' }))
+    await user.type(screen.getByRole('textbox', { name: 'Location' }), '!')
+
+    await user.click(screen.getByRole('button', { name: 'Extract the fields' }))
+
+    expect(screen.getByRole('group', { name: 'Replace your corrections?' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Keep my corrections' })).toHaveFocus()
   })
 })
