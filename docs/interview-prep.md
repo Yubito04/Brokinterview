@@ -741,6 +741,32 @@ boutons nommés, un tableau avec `<caption>` et `<th scope>`, `role="alert"` pou
 **Limite à admettre :** je l'ai vérifié avec des tests par rôle et par nom, pas avec un vrai
 lecteur d'écran ni un outil d'audit comme axe.
 
+### Comment as-tu rendu l'interface bilingue, et pourquoi ce choix ?
+
+react-i18next avec deux dictionnaires TypeScript. J'ai écarté react-intl (plus lourd pour ce
+besoin) et un système maison (pluriels et interpolation à réécrire). La langue au démarrage suit
+une fonction pure : choix mémorisé, sinon langue du navigateur, sinon anglais ; elle est testée
+seule. Un test de parité fait échouer la compilation de la suite si une clé ou une variable
+`{{x}}` manque d'un côté. **Limite à admettre :** le typage natif des clés d'i18next refusait mes
+clés sans préfixe (cause non trouvée) ; j'ai écrit un petit hook `useT` qui type les clés, au prix
+de la vérification des variables à la compilation. C'est au backlog, en temps limité.
+
+### Comment traduis-tu les erreurs 422 de Pydantic, qui arrivent en anglais ?
+
+Je ne traduis jamais la phrase : elle peut changer d'une version à l'autre. Chaque erreur a un
+`type` stable (`string_too_short`) et un `ctx` (`min_length`), et le frontend choisit son texte
+d'après eux. Les codes viennent des vraies réponses de l'API, car mes suppositions étaient
+fausses (une date mal écrite donne `date_from_datetime_parsing`). Pour ma règle PATCH « pas de
+null », j'ai remplacé un `ValueError` (code générique) par une `PydanticCustomError` à code propre,
+`null_not_allowed`, avec le nom du champ dans `ctx`. Un code inconnu donne « Valeur invalide ».
+
+### Pourquoi une date d'échéance pouvait-elle s'afficher avec un jour de moins ?
+
+`"2026-11-20"` devient minuit UTC dans un objet `Date` ; affiché dans un fuseau à l'ouest de
+Greenwich, c'est la veille. Une échéance est une date de calendrier, pas un instant : je la formate
+en UTC, avec `Intl` et `dateStyle: 'medium'` pour éviter l'ambiguïté jour/mois. Mon test force un
+fuseau à l'ouest et j'ai vérifié qu'il échoue sans le correctif.
+
 ---
 
 ## Déploiement

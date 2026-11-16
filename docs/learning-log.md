@@ -552,6 +552,16 @@ doit avoir son propre code : `PydanticCustomError("null_not_allowed", ..., {"fie
 remplace un `ValueError`, que Pydantic aurait rangé sous le code générique `value_error`. Un
 code inconnu, ou un détail manquant, donne un texte générique plutôt qu'une phrase cassée.
 
+## 63. Une date sans heure et le fuseau horaire
+
+`"2026-11-20"` n'a ni heure ni fuseau, mais `new Date(...)` en fait un instant précis (minuit UTC),
+et `Intl.DateTimeFormat` l'affiche par défaut dans le fuseau du lecteur : à Los Angeles (UTC-8),
+minuit UTC est encore le 19 au soir. Pour une date de calendrier (une échéance), on veut le même
+jour partout : on formate donc en UTC (`timeZone: 'UTC'`). Dans le projet : `formatDeadline`, et un
+test qui force `America/Los_Angeles`. Une vérification par mutation (retirer `timeZone`) a montré
+que le test attrape bien l'erreur ; une première version, qui réglait `TZ` en ligne de commande,
+ne prouvait rien, car Node sous Windows l'ignore à cet endroit.
+
 ---
 
 ## Prochaines notions

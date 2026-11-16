@@ -78,6 +78,16 @@ Open **http://localhost:5173** (not `127.0.0.1`: Vite listens on IPv6 `::1` here
 backend must be running. Details in [`frontend/README.md`](frontend/README.md) and
 [ADR 008](docs/adr/008-choix-techniques-du-frontend.md).
 
+## Languages (i18n)
+
+The interface is in French and English. The language is the user's choice from the selector in the
+header (kept in `localStorage`, key `applyflow.lang`), otherwise the browser's, otherwise English.
+Texts live in `frontend/src/i18n/fr.ts` (the reference) and `en.ts`; a test fails if their keys or
+`{{variables}}` differ. Dates use `Intl`, and API errors are translated from stable codes (the
+`kind` of the error, Pydantic's `type` and `ctx`), never from the English message. To add a text:
+add the key to both dictionaries and use `useT()`. See
+[ADR 009](docs/adr/009-interface-bilingue-i18n.md).
+
 ## CORS (browser access)
 
 The frontend (Vite, `http://localhost:5173`) lives on another origin than the API, so the

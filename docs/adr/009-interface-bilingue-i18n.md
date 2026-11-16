@@ -1,6 +1,6 @@
 # ADR 009 — Interface bilingue (français et anglais)
 
-- **Statut** : Accepté (en cours de mise en œuvre : voir « Avancement »)
+- **Statut** : Accepté
 - **Date** : 2026-11-16
 
 ## Contexte
@@ -61,14 +61,42 @@ pas vue à la compilation.
 
 Retenter le typage natif est au backlog, en temps limité.
 
+## Erreurs : deux textes pour deux lecteurs
+
+`ApiError` garde un `message` anglais, pour les journaux et le débogueur, et ne l'affiche
+jamais. Ce que l'utilisateur lit vient de deux fonctions :
+
+- `describeError(erreur, t)` choisit un texte d'après le `kind` (réseau, délai, 404...). La table
+  est un `Record` sur tous les `kind` : en ajouter un sans texte ne compile pas. Les détails
+  (`seconds`, `status`) sont dans `ApiError.params`.
+- `describeIssue(issue, t)` traduit une erreur de champ 422 d'après son `type` Pydantic et son
+  `ctx` (`string_too_short` + `min_length: 1`). Un code inconnu, ou un détail absent, donne
+  « Valeur invalide » plutôt qu'une phrase cassée.
+
+Les codes de la table viennent des vraies réponses de l'API, pas de suppositions.
+
+**`null_not_allowed`.** La règle PATCH « X ne peut pas être null » levait un `ValueError`, que
+Pydantic range sous le code générique `value_error`. Elle lève maintenant une
+`PydanticCustomError("null_not_allowed", ..., {"field": nom})` : le frontend rattache l'erreur au
+bon champ sans lire de phrase. Le test de contrat OpenAPI passe sans régénération : le schéma
+standard de FastAPI ne déclare pas `ctx`.
+
+## Dates
+
+`Intl.DateTimeFormat` avec `dateStyle: 'medium'`, dans la langue courante. Une date sans heure
+(`"2026-11-20"`) est lue comme minuit UTC et formatée **en UTC** : dans le fuseau du lecteur, elle
+afficherait la veille à l'ouest de Greenwich. Une date qui n'existe pas (`2026-02-31`) est
+affichée telle quelle plutôt que corrigée en silence. Le test force un fuseau à l'ouest et
+échoue si le `timeZone: 'UTC'` est retiré (vérifié).
+
 ## Avancement
 
 1. ✔ Cœur : détection, mémorisation, `<html lang>` (`src/i18n/`).
 2. ✔ Dictionnaires, `Messages`, `MessageKey`, test de parité.
-3. ☐ Provider, sélecteur de langue, composants existants.
-4. ☐ Erreurs : `kind` traduit, codes `type`/`ctx` des 422, code `null_not_allowed` côté backend.
-5. ☐ Dates avec `Intl`.
-6. ☐ Mise à jour finale de cet ADR, README, learning-log, interview-prep.
+3. ✔ Provider, sélecteur de langue, composants existants.
+4. ✔ Erreurs : `kind` traduit, codes `type`/`ctx` des 422, code `null_not_allowed` côté backend.
+5. ✔ Dates avec `Intl`.
+6. ✔ Mise à jour finale de cet ADR, README, learning-log, interview-prep.
 
 ## Conséquences
 
