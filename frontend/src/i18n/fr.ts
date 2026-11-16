@@ -93,6 +93,8 @@ export const fr = {
     tooShort: 'Trop court (minimum : {{min}}).',
     tooLong: 'Trop long (maximum : {{max}}).',
     unknownChoice: "Cette valeur n'est pas dans la liste.",
+    replyWithoutContact: 'Une réponse suppose une date de contact.',
+    replyBeforeContact: 'La réponse ne peut pas précéder le contact.',
     invalidDate: 'Date invalide (format AAAA-MM-JJ).',
     invalidDateTime: 'Date et heure invalides.',
     invalid: 'Valeur invalide.',

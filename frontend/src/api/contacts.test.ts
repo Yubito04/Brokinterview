@@ -88,3 +88,18 @@ describe('deleteContact', () => {
     expect((error as ApiError).kind).toBe('not_found')
   })
 })
+
+describe('the contact dates rule of the backend', () => {
+  it('arrives under the replied_at field, with its code and no ctx', async () => {
+    // The shape the API sends for this rule: no "ctx" at all.
+    const detail = [{ type: 'reply_before_contact', loc: ['body', 'replied_at'], msg: 'x' }]
+    const { client } = clientAnswering(422, { detail })
+    const error = await updateContact(client, 5, { replied_at: '2026-10-30T08:00:00Z' }).catch(
+      (caught: unknown) => caught,
+    )
+    expect((error as ApiError).fieldErrors.replied_at).toMatchObject({
+      type: 'reply_before_contact',
+      ctx: {},
+    })
+  })
+})

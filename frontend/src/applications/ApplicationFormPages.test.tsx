@@ -29,8 +29,9 @@ function issue(type: string, field: string, ctx: Record<string, unknown> = {}) {
 
 type FakeOptions = {
   initial?: Application[]
-  // Milliseconds the write answers late, to test the "saving" state.
-  writeDelayMs?: number
+  // Writes wait until the test calls release(): the "saving" state lasts exactly as
+  // long as the test needs, whatever the speed of the machine (no timer to race).
+  holdWrites?: boolean
   // Makes every write fail like the network.
   writesFailWithNetworkError?: boolean
   // Extra 422 issues for the next write.
@@ -39,13 +40,17 @@ type FakeOptions = {
 
 function fakeBackend({
   initial = [],
-  writeDelayMs = 0,
+  holdWrites = false,
   writesFailWithNetworkError = false,
   extraIssues = [],
 }: FakeOptions = {}) {
   const store = [...initial]
   const sent: Sent[] = []
   let nextId = 100
+  let release: () => void = () => {}
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
 
   function validate(body: Record<string, unknown>, partial: boolean) {
     const issues = [...extraIssues]
@@ -64,7 +69,7 @@ function fakeBackend({
 
     if (method !== 'GET') {
       if (writesFailWithNetworkError) throw new TypeError('Failed to fetch')
-      if (writeDelayMs) await new Promise((resolve) => setTimeout(resolve, writeDelayMs))
+      if (holdWrites) await gate
     }
 
     if (url.pathname === '/applications' && method === 'GET') {
@@ -102,7 +107,7 @@ function fakeBackend({
   vi.stubGlobal('fetch', fetchFn)
 
   const writes = () => sent.filter((request) => request.method !== 'GET')
-  return { store, sent, writes }
+  return { store, sent, writes, release: () => release() }
 }
 
 const ACME: Application = {
@@ -215,7 +220,7 @@ describe('create form', () => {
   })
 
   it('sends only one request when the button is clicked twice', async () => {
-    const backend = fakeBackend({ writeDelayMs: 50 })
+    const backend = fakeBackend({ holdWrites: true })
     const { user } = renderAt('/applications/new')
     await user.type(field(/Entreprise/), 'Globex')
     await user.type(field(/Poste/), 'Engineer')
@@ -224,6 +229,8 @@ describe('create form', () => {
     await user.click(button)
     expect(screen.getByRole('button', { name: 'Enregistrement…' })).toBeDisabled()
     await user.click(screen.getByRole('button', { name: 'Enregistrement…' }))
+    // Only now does the server answer.
+    backend.release()
 
     expect(await screen.findByText('Candidature créée.')).toBeInTheDocument()
     expect(backend.writes()).toHaveLength(1)
