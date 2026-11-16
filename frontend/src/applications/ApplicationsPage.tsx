@@ -3,6 +3,7 @@ import { ApplicationList } from './ApplicationList'
 import { PaginationNav } from './PaginationNav'
 import { SearchBox } from './SearchBox'
 import { StatusFilter } from './StatusFilter'
+import { describeError } from '../i18n/describeError'
 import { useT } from '../i18n/useT'
 import { clampPage, totalPages } from './pagination'
 import { useApplicationFilters } from './useApplicationFilters'
@@ -44,7 +45,7 @@ export function ApplicationsPage() {
 
         {query.isError && (
           <div role="alert" className="text-red-700">
-            <p>{t('applications.loadError', { reason: query.error.message })}</p>
+            <p>{t('applications.loadError', { reason: describeError(query.error, t) })}</p>
             <button
               type="button"
               onClick={() => void query.refetch()}

@@ -44,4 +44,29 @@ export const fr = {
     location: 'Lieu',
     deadline: 'Date limite',
   },
+  // What the user reads for each kind of ApiError (the error's own message is English
+  // and for developers only).
+  errors: {
+    network: 'Impossible de joindre le serveur. Est-il démarré ?',
+    timeout: 'Le serveur a mis plus de {{seconds}} secondes à répondre. Réessayez.',
+    unavailable: "Ce service n'est pas disponible pour le moment.",
+    upstream: "Le service d'IA a échoué. Réessayez dans un instant.",
+    upstreamTimeout: "Le service d'IA a mis trop de temps à répondre. Réessayez.",
+    notFound: 'Introuvable.',
+    http: 'Erreur inattendue (HTTP {{status}}).',
+    validation: 'Certains champs sont invalides.',
+    unknown: 'Une erreur inattendue est survenue.',
+  },
+  // What is wrong with one field, chosen from Pydantic's error codes.
+  validation: {
+    missing: 'Ce champ est obligatoire.',
+    nullNotAllowed: 'Ce champ ne peut pas être vide.',
+    notText: 'Ce champ doit contenir du texte.',
+    tooShort: 'Trop court (minimum : {{min}}).',
+    tooLong: 'Trop long (maximum : {{max}}).',
+    unknownChoice: "Cette valeur n'est pas dans la liste.",
+    invalidDate: 'Date invalide (format AAAA-MM-JJ).',
+    invalidDateTime: 'Date et heure invalides.',
+    invalid: 'Valeur invalide.',
+  },
 }

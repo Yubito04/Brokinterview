@@ -123,7 +123,11 @@ describe('ApplicationsPage', () => {
       const { user } = renderAt('/')
 
       const alert = await screen.findByRole('alert')
-      expect(alert).toHaveTextContent('Impossible de charger les candidatures')
+      // In French, with the translated reason, and not the English developer message.
+      expect(alert).toHaveTextContent(
+        'Impossible de charger les candidatures : Impossible de joindre le serveur. Est-il démarré ?',
+      )
+      expect(alert).not.toHaveTextContent('Cannot reach the API')
 
       fetchFn.mockResolvedValue(
         jsonResponse({ items: [makeApplication(1)], total: 1, limit: 20, offset: 0 }),

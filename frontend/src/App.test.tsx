@@ -136,4 +136,20 @@ describe('language of the interface', () => {
       await screen.findByText('No application matches the current filters.'),
     ).toBeInTheDocument()
   })
+
+  it('translates the reason of a loading error, in both languages', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+    const user = renderApp('/', 'en')
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(
+      'Could not load the applications: Cannot reach the server. Is it running?',
+    )
+
+    await user.selectOptions(languageSelect(), 'Français')
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Impossible de charger les candidatures : Impossible de joindre le serveur. Est-il démarré ?',
+    )
+  })
 })

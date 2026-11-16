@@ -9,53 +9,85 @@ export type ApiErrorKind =
   | 'network' // no answer at all: API off, CORS, no connection
   | 'http' // any other error status
 
+// One thing the API found wrong in the data we sent (one entry of a 422's `detail`).
+// `type` is Pydantic's stable error code ("missing", "string_too_short"...) and `ctx`
+// its details ({min_length: 1}): the screens translate from these. `message` is
+// Pydantic's English sentence, kept only for logs and debugging, never shown.
+export type ValidationIssue = {
+  type: string
+  ctx: Record<string, unknown>
+  message: string
+}
+
 export class ApiError extends Error {
   readonly kind: ApiErrorKind
   readonly status?: number
-  // Field name -> message, for errors that belong to one form field.
-  readonly fieldErrors: Record<string, string>
+  // Field name -> what is wrong, for errors that belong to one form field.
+  readonly fieldErrors: Record<string, ValidationIssue>
+  // Problems that belong to no particular field.
+  readonly formErrors: ValidationIssue[]
+  // Numbers the translated message needs ({seconds: 10} for a timeout, {status: 500}).
+  readonly params: Record<string, number>
 
+  // `message` is English and for developers (logs, debugger). What the user reads
+  // is chosen by `kind` and written in the user's language: see describeError.
   constructor(
     kind: ApiErrorKind,
     message: string,
-    options: { status?: number; fieldErrors?: Record<string, string> } = {},
+    options: {
+      status?: number
+      fieldErrors?: Record<string, ValidationIssue>
+      formErrors?: ValidationIssue[]
+      params?: Record<string, number>
+    } = {},
   ) {
     super(message)
     this.name = 'ApiError'
     this.kind = kind
     this.status = options.status
     this.fieldErrors = options.fieldErrors ?? {}
+    this.formErrors = options.formErrors ?? []
+    this.params = options.params ?? {}
   }
 }
 
-type ValidationItem = { loc?: unknown; msg?: unknown }
+type ValidationItem = { loc?: unknown; msg?: unknown; type?: unknown; ctx?: unknown }
 
 function isValidationItem(item: unknown): item is ValidationItem {
   return typeof item === 'object' && item !== null
 }
 
-// FastAPI sends a 422 as {"detail": [{"loc": ["body", "company"], "msg": "..."}]}.
-// loc[0] says where the problem is ("body", "query"...), the rest names the field.
-// A loc of just ["body"] means "the whole body is wrong", which is how the PATCH
-// rule "X cannot be null" arrives: that one is a general error, not a field one.
+// FastAPI sends a 422 as {"detail": [{"type": "missing", "loc": ["body", "company"],
+// "msg": "...", "ctx": {...}}]}. loc[0] says where the problem is ("body", "query"...),
+// the rest names the field. A loc of just ["body"] means "the whole body is wrong".
+// One exception: the PATCH rule "X cannot be null" also arrives with loc ["body"], but
+// its code is "null_not_allowed" and ctx.field names the field, so it is a field error.
 export function parseValidationDetail(detail: unknown): {
-  fieldErrors: Record<string, string>
-  formErrors: string[]
+  fieldErrors: Record<string, ValidationIssue>
+  formErrors: ValidationIssue[]
 } {
-  const fieldErrors: Record<string, string> = {}
-  const formErrors: string[] = []
-  if (!Array.isArray(detail)) return { fieldErrors, formErrors: ['Invalid data'] }
+  const fieldErrors: Record<string, ValidationIssue> = {}
+  const formErrors: ValidationIssue[] = []
+  if (!Array.isArray(detail)) {
+    return { fieldErrors, formErrors: [{ type: 'unknown', ctx: {}, message: 'Invalid data' }] }
+  }
 
   for (const item of detail) {
     if (!isValidationItem(item)) continue
+    const type = typeof item.type === 'string' ? item.type : 'unknown'
+    const ctx =
+      typeof item.ctx === 'object' && item.ctx !== null ? (item.ctx as Record<string, unknown>) : {}
     const message = typeof item.msg === 'string' ? item.msg : 'Invalid value'
-    const path = Array.isArray(item.loc) ? item.loc.slice(1).map(String) : []
+    const issue: ValidationIssue = { type, ctx, message: message.replace(/^Value error, /, '') }
+
+    let path = Array.isArray(item.loc) ? item.loc.slice(1).map(String) : []
+    if (type === 'null_not_allowed' && typeof ctx.field === 'string') path = [ctx.field]
+
     if (path.length === 0) {
-      formErrors.push(message.replace(/^Value error, /, ''))
+      formErrors.push(issue)
     } else {
-      const field = path.join('.')
-      // Keep the first message per field: one is enough to show next to it.
-      fieldErrors[field] ??= message
+      // Keep the first issue per field: one is enough to show next to it.
+      fieldErrors[path.join('.')] ??= issue
     }
   }
   return { fieldErrors, formErrors }
@@ -76,8 +108,8 @@ export async function errorFromResponse(response: Response): Promise<ApiError> {
 
   if (status === 422) {
     const { fieldErrors, formErrors } = parseValidationDetail(detail)
-    const message = formErrors[0] ?? 'Some fields are invalid.'
-    return new ApiError('validation', message, { status, fieldErrors })
+    const message = formErrors[0]?.message ?? 'Some fields are invalid.'
+    return new ApiError('validation', message, { status, fieldErrors, formErrors })
   }
   if (status === 404) return new ApiError('not_found', 'Not found.', { status })
   if (status === 503) {
@@ -92,5 +124,5 @@ export async function errorFromResponse(response: Response): Promise<ApiError> {
     })
   }
   const message = typeof detail === 'string' ? detail : `Unexpected error (HTTP ${status}).`
-  return new ApiError('http', message, { status })
+  return new ApiError('http', message, { status, params: { status } })
 }

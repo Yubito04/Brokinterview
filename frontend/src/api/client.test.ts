@@ -66,12 +66,22 @@ describe('success', () => {
 })
 
 describe('422 validation errors', () => {
-  it('turns each failing field into a field error', async () => {
+  it('turns each failing field into an issue with its code and details', async () => {
     const { client } = clientAnswering(
       jsonResponse(422, {
         detail: [
-          { loc: ['body', 'company'], msg: 'String should have at least 1 character' },
-          { loc: ['body', 'deadline'], msg: 'Input should be a valid date' },
+          {
+            type: 'string_too_short',
+            loc: ['body', 'company'],
+            msg: 'String should have at least 1 character',
+            ctx: { min_length: 1 },
+          },
+          {
+            type: 'date_from_datetime_parsing',
+            loc: ['body', 'deadline'],
+            msg: 'Input should be a valid date',
+            ctx: { error: 'input is too short' },
+          },
         ],
       }),
     )
@@ -81,38 +91,94 @@ describe('422 validation errors', () => {
     expect(error.kind).toBe('validation')
     expect(error.status).toBe(422)
     expect(error.fieldErrors).toEqual({
-      company: 'String should have at least 1 character',
-      deadline: 'Input should be a valid date',
+      company: {
+        type: 'string_too_short',
+        ctx: { min_length: 1 },
+        message: 'String should have at least 1 character',
+      },
+      deadline: {
+        type: 'date_from_datetime_parsing',
+        ctx: { error: 'input is too short' },
+        message: 'Input should be a valid date',
+      },
+    })
+    expect(error.formErrors).toEqual([])
+  })
+
+  it('has an empty ctx when the API sends none', async () => {
+    const { client } = clientAnswering(
+      jsonResponse(422, {
+        detail: [{ type: 'missing', loc: ['body', 'company'], msg: 'Field required' }],
+      }),
+    )
+
+    const error = await failureOf(client.request('/applications'))
+
+    expect(error.fieldErrors.company).toEqual({
+      type: 'missing',
+      ctx: {},
+      message: 'Field required',
     })
   })
 
-  it('keeps only the first message when a field fails twice', async () => {
+  it('keeps only the first issue when a field fails twice', async () => {
     const { client } = clientAnswering(
       jsonResponse(422, {
         detail: [
-          { loc: ['body', 'company'], msg: 'first' },
-          { loc: ['body', 'company'], msg: 'second' },
+          { type: 'a', loc: ['body', 'company'], msg: 'first' },
+          { type: 'b', loc: ['body', 'company'], msg: 'second' },
         ],
       }),
     )
 
     const error = await failureOf(client.request('/applications'))
 
-    expect(error.fieldErrors).toEqual({ company: 'first' })
+    expect(Object.keys(error.fieldErrors)).toEqual(['company'])
+    expect(error.fieldErrors.company.message).toBe('first')
   })
 
-  it('treats the PATCH "cannot be null" rule as a general error, not a field error', async () => {
+  it('attaches the PATCH "null_not_allowed" rule to the field named in ctx', async () => {
+    // loc is only ["body"] for this rule, but its code and ctx.field say which field.
     const { client } = clientAnswering(
       jsonResponse(422, {
-        detail: [{ loc: ['body'], msg: 'Value error, company cannot be null' }],
+        detail: [
+          {
+            type: 'null_not_allowed',
+            loc: ['body'],
+            msg: 'company cannot be null',
+            ctx: { field: 'company' },
+          },
+        ],
       }),
     )
 
     const error = await failureOf(client.request('/applications/1', { method: 'PATCH' }))
 
     expect(error.kind).toBe('validation')
+    expect(error.fieldErrors).toEqual({
+      company: {
+        type: 'null_not_allowed',
+        ctx: { field: 'company' },
+        message: 'company cannot be null',
+      },
+    })
+    expect(error.formErrors).toEqual([])
+  })
+
+  it('keeps an error with no field as a general error', async () => {
+    const { client } = clientAnswering(
+      jsonResponse(422, {
+        detail: [{ type: 'value_error', loc: ['body'], msg: 'Value error, something is off' }],
+      }),
+    )
+
+    const error = await failureOf(client.request('/applications/1', { method: 'PATCH' }))
+
     expect(error.fieldErrors).toEqual({})
-    expect(error.message).toBe('company cannot be null')
+    expect(error.formErrors).toEqual([
+      { type: 'value_error', ctx: {}, message: 'something is off' },
+    ])
+    expect(error.message).toBe('something is off')
   })
 
   it('falls back to a generic message when detail is not a list', async () => {
@@ -172,6 +238,7 @@ describe('other error statuses', () => {
     expect(error.kind).toBe('http')
     expect(error.status).toBe(500)
     expect(error.message).toBe('Unexpected error (HTTP 500).')
+    expect(error.params).toEqual({ status: 500 })
   })
 })
 
@@ -202,6 +269,7 @@ describe('timeout and cancellation', () => {
 
     expect(error.kind).toBe('timeout')
     expect(error.message).toBe('The server took more than 5 seconds to answer. Try again.')
+    expect(error.params).toEqual({ seconds: 5 })
   })
 
   it('a per-call timeout overrides the default', async () => {

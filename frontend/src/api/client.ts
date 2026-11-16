@@ -66,6 +66,7 @@ export function createApiClient({
         throw new ApiError(
           'timeout',
           `The server took more than ${Math.round(timeoutMs / 1000)} seconds to answer. Try again.`,
+          { params: { seconds: Math.round(timeoutMs / 1000) } },
         )
       }
       // The caller cancelled on purpose: not a failure to show, so it passes through.
