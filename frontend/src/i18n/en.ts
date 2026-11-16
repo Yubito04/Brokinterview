@@ -46,6 +46,15 @@ export const en: Messages = {
   },
   detail: {
     edit: 'Edit',
+    delete: 'Delete',
+    deleteTitle: 'Delete this application?',
+    deleteNone: '"{{company}}" will be permanently deleted.',
+    deleteOne: '"{{company}}" and its contact will be permanently deleted.',
+    deleteMany: '"{{company}}" and its {{count}} contacts will be permanently deleted.',
+    deleteUnknown: '"{{company}}" and its contacts, if any, will be permanently deleted.',
+    confirmDelete: 'Yes, delete',
+    deleting: 'Deleting…',
+    deleteFailed: 'Could not delete the application: {{reason}}',
   },
   contacts: {
     title: 'Contacts',
@@ -80,6 +89,7 @@ export const en: Messages = {
   notice: {
     created: 'Application created.',
     updated: 'Application updated.',
+    deleted: 'Application deleted.',
   },
   form: {
     company: 'Company',

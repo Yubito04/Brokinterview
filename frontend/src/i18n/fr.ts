@@ -51,6 +51,15 @@ export const fr = {
   // The create / edit form.
   detail: {
     edit: 'Modifier',
+    delete: 'Supprimer',
+    deleteTitle: 'Supprimer cette candidature ?',
+    deleteNone: '« {{company}} » sera supprimée définitivement.',
+    deleteOne: '« {{company}} » et son contact seront supprimés définitivement.',
+    deleteMany: '« {{company}} » et ses {{count}} contacts seront supprimés définitivement.',
+    deleteUnknown: '« {{company}} » et ses contacts éventuels seront supprimés définitivement.',
+    confirmDelete: 'Oui, supprimer',
+    deleting: 'Suppression…',
+    deleteFailed: 'Impossible de supprimer la candidature : {{reason}}',
   },
   contacts: {
     title: 'Contacts',
@@ -86,6 +95,7 @@ export const fr = {
   notice: {
     created: 'Candidature créée.',
     updated: 'Candidature modifiée.',
+    deleted: 'Candidature supprimée.',
   },
   form: {
     company: 'Entreprise',

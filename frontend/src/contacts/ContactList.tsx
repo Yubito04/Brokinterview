@@ -1,17 +1,17 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { api } from '../api'
 import {
   createContact,
   deleteContact,
-  listContacts,
   updateContact,
   type Contact,
 } from '../api/contacts'
 import { describeError } from '../i18n/describeError'
 import { useT } from '../i18n/useT'
 import { ContactForm } from './ContactForm'
+import { useContacts } from './useContacts'
 import {
   EMPTY_CONTACT_FORM,
   formatContactDate,
@@ -38,10 +38,7 @@ export function ContactList({ applicationId }: Props) {
   // always on the page, empty, so that its changes are announced.
   const [message, setMessage] = useState('')
 
-  const query = useQuery({
-    queryKey: ['contacts', applicationId],
-    queryFn: ({ signal }) => listContacts(api, applicationId, signal),
-  })
+  const query = useContacts(applicationId)
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['contacts', applicationId] })
 
