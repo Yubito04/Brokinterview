@@ -158,6 +158,12 @@ def test_patch_null_on_required_field_returns_422(client):
     for field in ("company", "position", "status"):
         response = client.patch(f"/applications/{created['id']}", json={field: None})
         assert response.status_code == 422, field
+        # A stable error code and the field name, so a client can translate the
+        # error without reading the English message.
+        [error] = response.json()["detail"]
+        assert error["type"] == "null_not_allowed", field
+        assert error["ctx"] == {"field": field}, field
+        assert error["loc"] == ["body"], field
 
 
 def test_patch_unknown_status_returns_422(client):

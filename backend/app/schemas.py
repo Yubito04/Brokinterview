@@ -1,6 +1,7 @@
 from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic_core import PydanticCustomError
 
 from app.models import ApplicationStatus, ContactState
 
@@ -11,7 +12,13 @@ def reject_null_fields(model: BaseModel, *names: str) -> None:
     # optional field clears it.
     for name in names:
         if name in model.model_fields_set and getattr(model, name) is None:
-            raise ValueError(f"{name} cannot be null")
+            # A custom error with its own code (instead of a plain ValueError, which
+            # Pydantic reports as the generic "value_error" with an English sentence):
+            # the client reads `type` and `ctx.field` to translate the message
+            # and show it next to the right field.
+            raise PydanticCustomError(
+                "null_not_allowed", "{field} cannot be null", {"field": name}
+            )
 
 
 class ApplicationCreate(BaseModel):

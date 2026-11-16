@@ -134,6 +134,9 @@ def test_patch_contact_null_name_returns_422(client):
     response = client.patch(f"/contacts/{contact['id']}", json={"name": None})
 
     assert response.status_code == 422
+    [error] = response.json()["detail"]
+    assert error["type"] == "null_not_allowed"
+    assert error["ctx"] == {"field": "name"}
 
 
 def test_patch_contact_unknown_id_returns_404(client):
