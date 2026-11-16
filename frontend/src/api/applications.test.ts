@@ -3,6 +3,7 @@ import { createApiClient } from './client'
 import { ApiError } from './errors'
 import {
   createApplication,
+  deleteApplication,
   getApplication,
   listApplications,
   parseStatus,
@@ -145,5 +146,16 @@ describe('updateApplication', () => {
     expect(sent.method).toBe('PATCH')
     expect(sent.url.pathname).toBe('/applications/7')
     expect(sent.body).toEqual({ status: 'OFFER', location: null })
+  })
+})
+
+describe('deleteApplication', () => {
+  it('sends a DELETE and accepts the empty 204 answer', async () => {
+    const fetchFn = vi.fn().mockResolvedValue(new Response(null, { status: 204 }))
+    const client = createApiClient({ baseUrl: 'http://api.test', fetchFn })
+    await expect(deleteApplication(client, 7)).resolves.toBeUndefined()
+    const [url, init] = fetchFn.mock.calls[0] as [string, RequestInit]
+    expect(new URL(url).pathname).toBe('/applications/7')
+    expect(init.method).toBe('DELETE')
   })
 })

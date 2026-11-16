@@ -67,3 +67,9 @@ export function updateApplication(
 ): Promise<Application> {
   return client.request<Application>(`/applications/${id}`, { method: 'PATCH', body })
 }
+
+// Also deletes the application's contacts (cascade in the API): the screen says so
+// before asking for the confirmation.
+export function deleteApplication(client: ApiClient, id: number): Promise<void> {
+  return client.request<void>(`/applications/${id}`, { method: 'DELETE' })
+}
