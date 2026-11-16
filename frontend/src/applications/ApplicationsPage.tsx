@@ -49,9 +49,14 @@ export function ApplicationsPage() {
     <main className="mx-auto max-w-4xl p-8">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-3xl font-bold">{t('applications.title')}</h1>
-        <Link to="/applications/new" className="rounded bg-blue-700 px-4 py-2 text-white">
-          {t('applications.new')}
-        </Link>
+        <div className="flex gap-3">
+          <Link to="/applications/import" className="rounded border border-gray-400 px-4 py-2">
+            {t('import.link')}
+          </Link>
+          <Link to="/applications/new" className="rounded bg-blue-700 px-4 py-2 text-white">
+            {t('applications.new')}
+          </Link>
+        </div>
       </div>
 
       <p role="status" className={notice ? 'mt-4 rounded border border-green-700 p-3 text-green-800' : ''}>

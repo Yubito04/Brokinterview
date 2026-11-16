@@ -92,6 +92,16 @@ export const fr = {
     WAITING: 'En attente de réponse',
     REPLIED: 'A répondu',
   },
+  import: {
+    link: 'Importer une offre',
+    title: 'Importer une offre',
+    textLabel: "Texte de l'offre",
+    extract: 'Extraire les champs',
+    extracting: 'Extraction en cours…',
+    cancel: "Annuler l'extraction",
+    failed: "L'extraction a échoué :",
+    reviewTitle: 'Relecture avant création',
+  },
   notice: {
     created: 'Candidature créée.',
     updated: 'Candidature modifiée.',

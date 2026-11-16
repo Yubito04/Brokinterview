@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent } from 'react'
 import { useT } from '../i18n/useT'
 import type { FormValues } from './formValues'
 import { StatusField, TextField } from './fields'
@@ -14,6 +14,9 @@ type Props = {
   saving: boolean
   onSubmit: (values: FormValues) => void
   onCancel: () => void
+  // Inside another screen (the import): a section with a second-level heading instead of a
+  // whole page, so that the page keeps one <main> and one <h1>.
+  embedded?: boolean
 }
 
 const FIELD_NAMES = ['company', 'position', 'status', 'location', 'deadline']
@@ -26,6 +29,7 @@ export function ApplicationForm({
   saving,
   onSubmit,
   onCancel,
+  embedded = false,
 }: Props) {
   const t = useT()
   const [values, setValues] = useState(initialValues)
@@ -39,9 +43,17 @@ export function ApplicationForm({
   const set = <K extends keyof FormValues>(name: K) => (value: FormValues[K]) =>
     setValues((current) => ({ ...current, [name]: value }))
 
+  const headingId = useId()
+  const Wrapper = embedded ? 'section' : 'main'
+  const Heading = embedded ? 'h2' : 'h1'
+
   return (
-    <main className="mx-auto max-w-xl p-8">
-      <h1 className="text-3xl font-bold">{title}</h1>
+    // A <section> is only announced as a region when it is named: here, by its heading.
+    <Wrapper
+      aria-labelledby={embedded ? headingId : undefined}
+      className={embedded ? 'mt-8' : 'mx-auto max-w-xl p-8'}
+    >
+      <Heading id={headingId} className={embedded ? 'text-xl font-semibold' : 'text-3xl font-bold'}>{title}</Heading>
 
       {/* noValidate: the browser's own validation bubbles are in the browser's
           language, not the app's. The server's 422 answers, translated, are shown
@@ -95,6 +107,6 @@ export function ApplicationForm({
           </button>
         </div>
       </form>
-    </main>
+    </Wrapper>
   )
 }

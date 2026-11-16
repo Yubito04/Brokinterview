@@ -86,6 +86,16 @@ export const en: Messages = {
     WAITING: 'Waiting for a reply',
     REPLIED: 'Replied',
   },
+  import: {
+    link: 'Import a job posting',
+    title: 'Import a job posting',
+    textLabel: 'Job posting text',
+    extract: 'Extract the fields',
+    extracting: 'Extracting…',
+    cancel: 'Cancel the extraction',
+    failed: 'The extraction failed:',
+    reviewTitle: 'Review before creating',
+  },
   notice: {
     created: 'Application created.',
     updated: 'Application updated.',

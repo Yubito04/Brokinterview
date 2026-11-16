@@ -72,3 +72,32 @@ export function StatusField({ value, onChange, error }: StatusFieldProps) {
     </FormField>
   )
 }
+
+type TextAreaFieldProps = {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  rows?: number
+  required?: boolean
+  error?: string
+}
+
+// No `maxLength` here, on purpose: a browser silently CUTS a pasted text that is too long,
+// and the user would send a posting without its end without knowing. Without the limit,
+// the whole text stays, and the server's "too long" answer (before any paid call) tells
+// the user what is wrong.
+export function TextAreaField({ label, value, onChange, rows = 10, required, error }: TextAreaFieldProps) {
+  return (
+    <FormField label={label} required={required} error={error}>
+      {(control) => (
+        <textarea
+          {...control}
+          rows={rows}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className={CONTROL_CLASSES}
+        />
+      )}
+    </FormField>
+  )
+}
