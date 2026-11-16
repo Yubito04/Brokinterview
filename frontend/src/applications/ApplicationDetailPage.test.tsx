@@ -42,12 +42,16 @@ function contact(id: number, overrides: Partial<Contact> = {}): Contact {
   }
 }
 
-type Fake = { contacts?: Contact[]; contactsFailFirst?: boolean; globexContacts?: Contact[] }
+type Fake = { contacts?: Contact[]; contactsFailFirst?: boolean; globexContacts?: Contact[]; holdGlobexContacts?: boolean }
 
 const GLOBEX: Application = { ...ACME, id: 2, company: 'Globex' }
 
 // A tiny fake backend: the list, one application, and its contacts.
-function fakeBackend({ contacts = [], contactsFailFirst = false, globexContacts = [] }: Fake = {}) {
+function fakeBackend({ contacts = [], contactsFailFirst = false, globexContacts = [], holdGlobexContacts = false }: Fake = {}) {
+  let release: () => void = () => {}
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
   let failures = contactsFailFirst ? 1 : 0
   const requested: string[] = []
   vi.stubGlobal(
@@ -60,7 +64,10 @@ function fakeBackend({ contacts = [], contactsFailFirst = false, globexContacts 
       }
       if (url.pathname === '/applications/1') return json(ACME)
       if (url.pathname === '/applications/2') return json(GLOBEX)
-      if (url.pathname === '/applications/2/contacts') return json(globexContacts)
+      if (url.pathname === '/applications/2/contacts') {
+        if (holdGlobexContacts) await gate
+        return json(globexContacts)
+      }
       if (url.pathname === '/applications/1/contacts') {
         if (failures > 0) {
           failures -= 1
@@ -71,7 +78,7 @@ function fakeBackend({ contacts = [], contactsFailFirst = false, globexContacts 
       return json({ detail: 'Application not found' }, 404)
     }),
   )
-  return { requested }
+  return { requested, releaseGlobex: () => release() }
 }
 
 function renderAt(url: string, language: Language = 'fr') {
@@ -210,15 +217,21 @@ describe('application detail page', () => {
   })
 
   it('does not show the contacts of another application after moving to it', async () => {
-    fakeBackend({
+    const backend = fakeBackend({
       contacts: [contact(1, { name: 'Alice' })],
       globexContacts: [contact(9, { name: 'Zoe', application_id: 2 })],
+      holdGlobexContacts: true,
     })
     const { router } = renderAt('/applications/1')
     expect(await screen.findByRole('rowheader', { name: 'Alice' })).toBeInTheDocument()
 
     await act(() => router.navigate('/applications/2'))
 
+    // While Globex's contacts are still loading, Acme's must not be shown under Globex.
+    expect(await screen.findByRole('heading', { level: 1, name: 'Globex' })).toBeInTheDocument()
+    expect(screen.queryByRole('rowheader', { name: 'Alice' })).not.toBeInTheDocument()
+
+    backend.releaseGlobex()
     expect(await screen.findByRole('rowheader', { name: 'Zoe' })).toBeInTheDocument()
     expect(screen.queryByRole('rowheader', { name: 'Alice' })).not.toBeInTheDocument()
   })
