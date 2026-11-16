@@ -767,6 +767,35 @@ Greenwich, c'est la veille. Une échéance est une date de calendrier, pas un in
 en UTC, avec `Intl` et `dateStyle: 'medium'` pour éviter l'ambiguïté jour/mois. Mon test force un
 fuseau à l'ouest et j'ai vérifié qu'il échoue sans le correctif.
 
+### Pourquoi ton formulaire ne valide-t-il rien lui-même ?
+
+Pour avoir une seule source de règles : l'API. Si je recopie « 1 à 200 caractères » dans le
+formulaire, il faut modifier deux endroits à chaque changement, et ils finissent par diverger. Le
+formulaire envoie ce qui est tapé ; l'API répond 422 avec un code stable (`string_too_short`), que
+je traduis sous le bon champ. **Compromis à admettre :** l'erreur n'apparaît qu'après un aller-retour
+réseau. Pour cinq champs c'est acceptable ; pour un formulaire long ou une règle coûteuse à
+atteindre côté serveur, je dupliquerais les règles simples (champ vide) en gardant le serveur comme
+autorité.
+
+### Pourquoi `noValidate`, et que perds-tu ?
+
+Les bulles de validation natives (`required`) sont dans la langue du navigateur, pas dans celle de
+mon interface bilingue : elles casseraient l'i18n. `noValidate` les coupe, et je garde
+`aria-required` pour les lecteurs d'écran. Ce que je perds : la validation gratuite du navigateur,
+que je remplace par les erreurs 422 traduites, affichées sous chaque champ avec `aria-invalid`,
+`aria-describedby` et le focus sur le premier champ en erreur. **Limite :** le calendrier du
+`<input type="date">` reste dans la langue du navigateur ; un sélecteur de date maison réglerait
+cela mais coûte un composant accessible à maintenir.
+
+### Comment évites-tu de créer deux candidatures si l'utilisateur clique deux fois ?
+
+Trois choses : le bouton est désactivé pendant la requête, `useMutation` ne rejoue pas
+automatiquement (contrairement à une lecture, un `POST` rejoué peut créer un doublon si la
+réponse s'est perdue), et mes fonctions d'écriture n'ont pas de signal d'annulation. Un test
+envoie deux clics et vérifie qu'un seul `POST` part, et j'ai vérifié par mutation qu'il échoue
+si je retire le `disabled`. **Limite :** cela ne protège pas contre deux onglets ; une vraie
+garantie demanderait une clé d'idempotence côté API.
+
 ---
 
 ## Déploiement

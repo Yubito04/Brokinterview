@@ -88,6 +88,13 @@ Texts live in `frontend/src/i18n/fr.ts` (the reference) and `en.ts`; a test fail
 add the key to both dictionaries and use `useT()`. See
 [ADR 009](docs/adr/009-interface-bilingue-i18n.md).
 
+## Create and edit an application
+
+Pages `/applications/new` and `/applications/:id/edit` (links on the list). The form does not
+validate anything itself: the API's 422 answers are shown, translated, under each field (browser
+validation bubbles are off with `noValidate`, because they would use the browser's language). An
+edit sends only the fields that changed. See [ADR 010](docs/adr/010-formulaire-de-candidature.md).
+
 ## CORS (browser access)
 
 The frontend (Vite, `http://localhost:5173`) lives on another origin than the API, so the

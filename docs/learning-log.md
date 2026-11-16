@@ -562,10 +562,55 @@ test qui force `America/Los_Angeles`. Une vérification par mutation (retirer `t
 que le test attrape bien l'erreur ; une première version, qui réglait `TZ` en ligne de commande,
 ne prouvait rien, car Node sous Windows l'ignore à cet endroit.
 
+## 64. Valider côté serveur seulement : une seule source de règles
+
+Si le formulaire recopie les règles de l'API (« 1 à 200 caractères »), il y a deux endroits à
+garder identiques, et ils finissent par diverger. Ici le formulaire n'a aucune règle : il envoie
+ce que l'utilisateur a tapé, l'API répond 422 avec un code (`string_too_short`) et le formulaire
+traduit ce code sous le bon champ. Le prix : un aller-retour réseau avant de voir l'erreur. Les
+attributs `maxLength` (limiter la saisie) et `aria-required` (annoncer « obligatoire ») ne sont
+pas de la validation : ils ne produisent aucun message.
+
+## 65. Pourquoi `noValidate`
+
+Avec l'attribut `required`, le navigateur bloque l'envoi et affiche sa propre bulle, **dans la
+langue du navigateur**, pas dans celle de l'application : un utilisateur qui a choisi l'anglais
+dans notre sélecteur verrait du français (ou l'inverse). `noValidate` sur le `<form>` coupe cette
+validation ; `aria-required` garde l'information pour les lecteurs d'écran. Même limite pour
+`<input type="date">` : le calendrier est dessiné par le navigateur, dans sa langue.
+
+## 66. Un vrai PATCH : n'envoyer que ce qui a changé
+
+`PATCH` signifie « modifier une partie » : un champ absent reste inchangé, `null` l'efface.
+Le formulaire compare ce que l'utilisateur voit à ce qui est enregistré et n'envoie que
+la différence : changer le statut envoie `{"status": "OFFER"}` et rien d'autre, vider le lieu
+envoie `{"location": null}`. Renvoyer tous les champs écraserait une modification faite entre-temps
+depuis un autre onglet. Si rien n'a changé, on n'envoie rien.
+
+## 67. Une écriture ne se rejoue pas à l'aveugle
+
+Une lecture peut être rejouée sans danger ; pas une création. Si un `POST` part mais que la
+réponse se perd, la ligne existe peut-être déjà : le rejouer crée un doublon. Pour cela
+`useMutation` ne rejoue pas par défaut, les fonctions d'écriture n'ont pas de signal
+d'annulation, et le bouton est désactivé pendant l'envoi (un double clic ne part qu'une fois).
+
+## 68. Après un échec, déplacer le focus
+
+Un utilisateur au clavier ou avec un lecteur d'écran n'a pas de signal visuel : si une erreur
+apparaît et que le focus reste sur le bouton, il ne sait pas que quelque chose a échoué. Le
+formulaire envoie le focus sur le premier champ invalide (dont le message est lu grâce à
+`aria-describedby`), ou sur le bloc d'erreur s'il n'y a pas de champ concerné.
+
+## 69. Une zone `role="status"` doit exister avant son message
+
+Un lecteur d'écran annonce le **changement** du contenu d'une zone live ; une zone qui apparaît
+déjà remplie n'est pas toujours annoncée. C'est la raison de la zone « Mise à jour… » toujours
+présente sur la liste, et la limite connue de la confirmation « Candidature créée. » (au
+backlog). Les tests par rôle ne le détectent pas : seul un vrai lecteur d'écran le montre.
+
 ---
 
 ## Prochaines notions
 
-- Formulaire de création et de modification, avec les erreurs 422 par champ.
 - Page de détail avec les contacts, puis extraction d'une offre avec relecture.
 - Authentification et limitation de débit avant tout déploiement.
