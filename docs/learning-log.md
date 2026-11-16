@@ -3,6 +3,26 @@
 Chaque concept appris, expliqué simplement, avec un exemple tiré du projet.
 Les entrées les plus récentes sont en bas.
 
+## Index par thème
+
+Les numéros sont ceux des entrées ci-dessous. Une entrée peut servir à plusieurs thèmes.
+
+| Thème | Entrées |
+|-------|---------|
+| **HTTP et API REST** | 1 (verbes), 2 (codes de statut), 4 (health check), 22 (`PATCH` et `null`), 23 (404, 422, 204), 41 (502, 503), 66 (vrai `PATCH`), 73 (règle sur l'état fusionné) |
+| **Validation et erreurs** | 3 (Pydantic), 34 (paramètres de requête), 62 (message pour le développeur et texte pour l'utilisateur), 64 (valider côté serveur seulement), 65 (`noValidate`) |
+| **Base de données et ORM** | 11 (URL et moteur), 13 (ORM), 14 (clés et relations), 15 (cascade), 16 (enum), 17 (donnée déduite), 18 (`server_default`), 20 (session et `Depends`), 21 (deux familles de modèles), 33 (pagination), 35 (tri stable), 36 (`LIKE` et injection SQL) |
+| **Migrations** | 28 (Alembic), 29 (anatomie d'une migration), 30 (enum PostgreSQL et downgrade), 31 (tests de garde), 32 (repartir d'un état propre) |
+| **Tests (backend)** | 5 (pytest), 12 (monkeypatch), 19 (SQLite en mémoire, étape initiale remplacée par une vraie base PostgreSQL : voir 25 et 26), 25 (transaction annulée), 26 (garde-fou), 40 (faux pour tester sans réseau) |
+| **Tests (frontend)** | 52 (faux `fetch` et minuteurs), 58 (par rôle et par nom), 70 (test instable) , 81 (commit sans lire le résultat) |
+| **IA et LLM** | 37 (sortie structurée), 38 (autoriser `null`), 39 (injection de prompt), 42 (coût), 76 (montrer le résultat d'un modèle), 77 (annuler), 78 (`maxLength` et texte collé), 79 (compter comme le serveur) |
+| **Délais et réseau** | 43 (CORS), 46 (IPv4 et IPv6), 47 (erreur CORS masquée), 51 (`AbortController`), 53 (délais décroissants), 59 (500 sans CORS), 67 (une écriture ne se rejoue pas) |
+| **Frontend : React et données** | 44 (`node_modules` et `package-lock`), 45 (`VITE_`), 48 (premiers concepts React), 49 (types générés), 50 (dépendance « peer »), 54 (URL, `push` et `replace`), 55 (page et offset), 56 (TanStack Query), 57 (debounce), 75 (cache et suppression) |
+| **Interface bilingue et dates** | 60 (langues du navigateur), 61 (`localStorage`), 63 (date et fuseau), 71 (instant et heure murale), 72 (précision de comparaison) |
+| **Accessibilité et interaction** | 58 (par rôle et par nom), 68 (déplacer le focus), 69 (zone `role="status"`), 74 (confirmer une action destructrice) |
+| **Sécurité** | 39 (injection de prompt), 45 (`VITE_` public), 80 (réglage de développement qui expose des fichiers), 36 (injection SQL) |
+| **Organisation du projet** | 6 (venv et requirements), 7 (`.gitignore`), 8 (ADR), 9 (Conventional Commits), 10 et 24 (configuration), 27 (port sous Windows), 81 (commiter après avoir lu les tests) |
+
 ---
 
 ## 1. API REST et verbes HTTP
