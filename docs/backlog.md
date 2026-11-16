@@ -65,4 +65,11 @@ Pistes d'amélioration identifiées, pas encore réalisées.
   premiers caractères de la date ISO ou en la convertissant dans le fuseau local) et
   ajuster les tests du tableau.
 
+- **Annoncer la confirmation aux lecteurs d'écran.** Le message « Candidature créée. » est
+  inséré dans un `role="status"` créé en même temps que lui : plusieurs lecteurs d'écran
+  n'annoncent une zone live que si elle existe **avant** le changement de son contenu. Corriger
+  en affichant la zone `role="status"` vide dès l'arrivée sur la liste, puis en y insérant le
+  message (même principe que la zone « Mise à jour… », déjà toujours présente). Vérifier avec un
+  vrai lecteur d'écran (NVDA), pas seulement avec les tests par rôle.
+
 Contexte (extraction) : [ADR 006](adr/006-extraction-d-offres-par-llm.md), section « Évaluation réelle ».
