@@ -6,7 +6,11 @@ import { extractJobPosting } from '../api/jobPostings'
 import { useT } from '../i18n/useT'
 import { ApplicationForm } from './ApplicationForm'
 import { ErrorSummary } from './ErrorSummary'
-import { reviewFromExtraction, type ExtractionReview } from './extractionReview'
+import {
+  reviewFromExtraction,
+  type ExtractedField,
+  type ExtractionReview,
+} from './extractionReview'
 import { TextAreaField } from './fields'
 import { useCreateApplication } from './useCreateApplication'
 import { useServerErrors } from './useServerErrors'
@@ -16,6 +20,40 @@ import { useServerErrors } from './useServerErrors'
 type Reviewed = { review: ExtractionReview; attempt: number }
 
 const FIELD_NAMES = ['text']
+
+// What is shown above the fields of the review. The AI can be WRONG in what it filled in,
+// not only silent about what it did not find. The evaluation on real postings (ADR 006)
+// found two fields to double-check: the position (null, reworded or another title from one
+// run to the next, when the text names none clearly) and the deadline (a posting with
+// several dates: one is chosen without saying so). The warning names those two.
+function ReviewIntro({ skills }: { skills: string[] }) {
+  const t = useT()
+  return (
+    <>
+      <p className="mt-3 rounded border border-amber-600 p-3 text-amber-900">{t('import.aiWarning')}</p>
+      <div className="mt-4">
+        <h3 className="font-medium">{t('import.skillsTitle')}</h3>
+        {skills.length === 0 ? (
+          <p className="mt-1">{t('import.skillsNone')}</p>
+        ) : (
+          // Plain text in a list: what the AI wrote is never read as markup.
+          <ul className="mt-1 flex flex-wrap gap-2">
+            {skills.map((skill) => (
+              <li key={skill} className="rounded border border-gray-400 px-2 py-0.5">
+                {skill}
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="mt-1 text-sm text-gray-600">{t('import.skillsNote')}</p>
+      </div>
+    </>
+  )
+}
+
+function notFoundHints(notFound: ExtractedField[], text: string) {
+  return Object.fromEntries(notFound.map((field) => [field, text])) as Partial<Record<ExtractedField, string>>
+}
 
 export function ImportApplicationPage() {
   const t = useT()
@@ -110,6 +148,8 @@ export function ImportApplicationPage() {
           title={t('import.reviewTitle')}
           submitLabel={t('form.submitCreate')}
           initialValues={reviewed.review.values}
+          intro={<ReviewIntro skills={reviewed.review.skills} />}
+          hints={notFoundHints(reviewed.review.notFound, t('import.notFound'))}
           error={creation.error}
           saving={creation.isPending}
           onSubmit={(values) => creation.mutate(values)}

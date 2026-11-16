@@ -95,6 +95,11 @@ export const en: Messages = {
     cancel: 'Cancel the extraction',
     failed: 'The extraction failed:',
     reviewTitle: 'Review before creating',
+    aiWarning: 'Fields extracted by AI: please check the position and the deadline in particular.',
+    notFound: 'Not found in the posting.',
+    skillsTitle: 'Detected skills',
+    skillsNone: 'No skill detected.',
+    skillsNote: 'Shown to help you review: they are not saved.',
   },
   notice: {
     created: 'Application created.',

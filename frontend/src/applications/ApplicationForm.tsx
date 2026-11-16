@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent, type ReactNode } from 'react'
 import { useT } from '../i18n/useT'
 import type { FormValues } from './formValues'
 import { StatusField, TextField } from './fields'
@@ -17,6 +17,10 @@ type Props = {
   // Inside another screen (the import): a section with a second-level heading instead of a
   // whole page, so that the page keeps one <main> and one <h1>.
   embedded?: boolean
+  // Content shown between the heading and the fields (the import's warning and skills).
+  intro?: ReactNode
+  // A short note under a field, by field name (the import's "not found in the posting").
+  hints?: Partial<Record<'company' | 'position' | 'location' | 'deadline', string>>
 }
 
 const FIELD_NAMES = ['company', 'position', 'status', 'location', 'deadline']
@@ -30,6 +34,8 @@ export function ApplicationForm({
   onSubmit,
   onCancel,
   embedded = false,
+  intro,
+  hints,
 }: Props) {
   const t = useT()
   const [values, setValues] = useState(initialValues)
@@ -54,6 +60,7 @@ export function ApplicationForm({
       className={embedded ? 'mt-8' : 'mx-auto max-w-xl p-8'}
     >
       <Heading id={headingId} className={embedded ? 'text-xl font-semibold' : 'text-3xl font-bold'}>{title}</Heading>
+      {intro}
 
       {/* noValidate: the browser's own validation bubbles are in the browser's
           language, not the app's. The server's 422 answers, translated, are shown
@@ -69,6 +76,7 @@ export function ApplicationForm({
           value={values.company}
           onChange={set('company')}
           error={fieldError('company')}
+          hint={hints?.company}
         />
         <TextField
           label={t('form.position')}
@@ -76,6 +84,7 @@ export function ApplicationForm({
           value={values.position}
           onChange={set('position')}
           error={fieldError('position')}
+          hint={hints?.position}
         />
         <StatusField value={values.status} onChange={set('status')} error={fieldError('status')} />
         <TextField
@@ -83,6 +92,7 @@ export function ApplicationForm({
           value={values.location}
           onChange={set('location')}
           error={fieldError('location')}
+          hint={hints?.location}
         />
         <TextField
           label={t('form.deadline')}
@@ -90,6 +100,7 @@ export function ApplicationForm({
           value={values.deadline}
           onChange={set('deadline')}
           error={fieldError('deadline')}
+          hint={hints?.deadline}
         />
 
         <div className="flex gap-3">

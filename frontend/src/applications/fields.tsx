@@ -15,6 +15,7 @@ type TextFieldProps = {
   type?: 'text' | 'date' | 'datetime-local'
   required?: boolean
   error?: string
+  hint?: string
 }
 
 export function TextField({
@@ -24,9 +25,10 @@ export function TextField({
   type = 'text',
   required,
   error,
+  hint,
 }: TextFieldProps) {
   return (
-    <FormField label={label} required={required} error={error}>
+    <FormField label={label} required={required} error={error} hint={hint}>
       {(control) => (
         <input
           {...control}

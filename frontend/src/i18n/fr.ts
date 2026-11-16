@@ -101,6 +101,11 @@ export const fr = {
     cancel: "Annuler l'extraction",
     failed: "L'extraction a échoué :",
     reviewTitle: 'Relecture avant création',
+    aiWarning: 'Champs extraits par IA : vérifiez en particulier le poste et la date limite.',
+    notFound: "Non trouvé dans l'offre.",
+    skillsTitle: 'Compétences détectées',
+    skillsNone: 'Aucune compétence détectée.',
+    skillsNote: 'Affichées pour vous aider à relire : elles ne sont pas enregistrées.',
   },
   notice: {
     created: 'Candidature créée.',
