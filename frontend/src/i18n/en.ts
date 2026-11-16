@@ -40,6 +40,14 @@ export const en: Messages = {
     location: 'Location',
     deadline: 'Deadline',
   },
+  form: {
+    company: 'Company',
+    position: 'Position',
+    status: 'Status',
+    location: 'Location',
+    deadline: 'Deadline',
+    requiredNote: 'Fields marked with * are required.',
+  },
   errors: {
     network: 'Cannot reach the server. Is it running?',
     timeout: 'The server took more than {{seconds}} seconds to answer. Try again.',

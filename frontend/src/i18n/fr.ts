@@ -44,6 +44,15 @@ export const fr = {
     location: 'Lieu',
     deadline: 'Date limite',
   },
+  // The create / edit form.
+  form: {
+    company: 'Entreprise',
+    position: 'Poste',
+    status: 'Statut',
+    location: 'Lieu',
+    deadline: 'Date limite',
+    requiredNote: "Les champs marqués d'un * sont obligatoires.",
+  },
   // What the user reads for each kind of ApiError (the error's own message is English
   // and for developers only).
   errors: {
