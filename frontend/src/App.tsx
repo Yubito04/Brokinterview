@@ -1,5 +1,7 @@
 import { Route, Routes } from 'react-router'
 import { ApplicationsPage } from './applications/ApplicationsPage'
+import { EditApplicationPage } from './applications/EditApplicationPage'
+import { NewApplicationPage } from './applications/NewApplicationPage'
 import { LanguageSwitcher } from './i18n/LanguageSwitcher'
 
 function App() {
@@ -11,6 +13,8 @@ function App() {
       </header>
       <Routes>
         <Route path="/" element={<ApplicationsPage />} />
+        <Route path="/applications/new" element={<NewApplicationPage />} />
+        <Route path="/applications/:id/edit" element={<EditApplicationPage />} />
       </Routes>
     </>
   )

@@ -12,6 +12,7 @@ export const fr = {
     loading: 'Chargement des candidatures…',
     updating: 'Mise à jour…',
     loadError: 'Impossible de charger les candidatures : {{reason}}',
+    new: 'Nouvelle candidature',
     retry: 'Réessayer',
     empty: {
       none: "Aucune candidature pour l'instant.",
@@ -43,8 +44,15 @@ export const fr = {
     status: 'Statut',
     location: 'Lieu',
     deadline: 'Date limite',
+    actions: 'Actions',
+    edit: 'Modifier {{company}}',
+    editShort: 'Modifier',
   },
   // The create / edit form.
+  notice: {
+    created: 'Candidature créée.',
+    updated: 'Candidature modifiée.',
+  },
   form: {
     company: 'Entreprise',
     position: 'Poste',
@@ -52,6 +60,17 @@ export const fr = {
     location: 'Lieu',
     deadline: 'Date limite',
     requiredNote: "Les champs marqués d'un * sont obligatoires.",
+    titleNew: 'Nouvelle candidature',
+    titleEdit: 'Modifier la candidature',
+    submitCreate: 'Créer la candidature',
+    submitEdit: 'Enregistrer les modifications',
+    saving: 'Enregistrement…',
+    cancel: 'Annuler',
+    saveFailed: "La candidature n'a pas été enregistrée :",
+    loading: 'Chargement de la candidature…',
+    loadError: 'Impossible de charger la candidature : {{reason}}',
+    notFound: "Cette candidature n'existe pas.",
+    backToList: 'Retour à la liste',
   },
   // What the user reads for each kind of ApiError (the error's own message is English
   // and for developers only).

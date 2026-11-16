@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import type { Application } from '../api/applications'
 import { useTranslation } from 'react-i18next'
 import { formatDeadline } from './formatDeadline'
@@ -21,7 +22,8 @@ export function ApplicationList({ applications, stale = false }: Props) {
           <th scope="col" className="py-2 pr-4">{t('table.position')}</th>
           <th scope="col" className="py-2 pr-4">{t('table.status')}</th>
           <th scope="col" className="py-2 pr-4">{t('table.location')}</th>
-          <th scope="col" className="py-2">{t('table.deadline')}</th>
+          <th scope="col" className="py-2 pr-4">{t('table.deadline')}</th>
+          <th scope="col" className="py-2"><span className="sr-only">{t('table.actions')}</span></th>
         </tr>
       </thead>
       <tbody>
@@ -31,7 +33,17 @@ export function ApplicationList({ applications, stale = false }: Props) {
             <td className="py-2 pr-4">{application.position}</td>
             <td className="py-2 pr-4">{t(`status.${application.status}`)}</td>
             <td className="py-2 pr-4">{application.location ?? '—'}</td>
-            <td className="py-2">{formatDeadline(application.deadline, i18n.language)}</td>
+            <td className="py-2 pr-4">{formatDeadline(application.deadline, i18n.language)}</td>
+            <td className="py-2">
+              {/* The visible word is short; the accessible name says which row. */}
+              <Link
+                to={`/applications/${application.id}/edit`}
+                aria-label={t('table.edit', { company: application.company })}
+                className="underline"
+              >
+                {t('table.editShort')}
+              </Link>
+            </td>
           </tr>
         ))}
       </tbody>

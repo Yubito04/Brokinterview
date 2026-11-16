@@ -6,7 +6,7 @@ import {
   toCreateBody,
   toUpdateBody,
   valuesFromApplication,
-} from './applicationForm'
+} from './formValues'
 
 const SAVED: Application = {
   id: 1,

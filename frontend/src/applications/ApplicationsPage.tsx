@@ -1,16 +1,28 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { ApplicationList } from './ApplicationList'
 import { PaginationNav } from './PaginationNav'
 import { SearchBox } from './SearchBox'
 import { StatusFilter } from './StatusFilter'
 import { describeError } from '../i18n/describeError'
 import { useT } from '../i18n/useT'
+import { readNotice } from './notice'
 import { clampPage, totalPages } from './pagination'
 import { useApplicationFilters } from './useApplicationFilters'
 import { useApplications } from './useApplications'
 
 export function ApplicationsPage() {
   const t = useT()
+  const location = useLocation()
+  const navigate = useNavigate()
+  // The confirmation sent by the form page ("created", "updated"). Kept in this state,
+  // then removed from the history entry: a reload (F5) must not show it a second time.
+  const [notice] = useState(() => readNotice(location.state))
+  useEffect(() => {
+    if (readNotice(location.state)) {
+      void navigate(`${location.pathname}${location.search}`, { replace: true, state: null })
+    }
+  }, [location, navigate])
   const { status, q, page, setStatus, setQuery, setPage } = useApplicationFilters()
   const query = useApplications({ status, q, page })
   const { data } = query
@@ -27,7 +39,18 @@ export function ApplicationsPage() {
 
   return (
     <main className="mx-auto max-w-4xl p-8">
-      <h1 className="text-3xl font-bold">{t('applications.title')}</h1>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-3xl font-bold">{t('applications.title')}</h1>
+        <Link to="/applications/new" className="rounded bg-blue-700 px-4 py-2 text-white">
+          {t('applications.new')}
+        </Link>
+      </div>
+
+      {notice && (
+        <p role="status" className="mt-4 rounded border border-green-700 p-3 text-green-800">
+          {t(`notice.${notice}`)}
+        </p>
+      )}
 
       <div className="mt-6 flex flex-wrap items-end gap-4">
         <SearchBox value={q} onSearch={setQuery} />
