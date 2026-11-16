@@ -6,7 +6,7 @@ import { SearchBox } from './SearchBox'
 import { StatusFilter } from './StatusFilter'
 import { describeError } from '../i18n/describeError'
 import { useT } from '../i18n/useT'
-import { readNotice } from './notice'
+import { readNotice, type Notice } from './notice'
 import { clampPage, totalPages } from './pagination'
 import { useApplicationFilters } from './useApplicationFilters'
 import { useApplications } from './useApplications'
@@ -15,11 +15,19 @@ export function ApplicationsPage() {
   const t = useT()
   const location = useLocation()
   const navigate = useNavigate()
-  // The confirmation sent by the form page ("created", "updated"). Kept in this state,
-  // then removed from the history entry: a reload (F5) must not show it a second time.
-  const [notice] = useState(() => readNotice(location.state))
+  // The confirmation sent by the form page ("created", "updated"). The region that
+  // shows it is rendered EMPTY from the first render and filled afterwards: many screen
+  // readers announce a change inside a live region, not a region that appears already
+  // full. The message is then removed from the history entry, so that a reload (F5) does
+  // not show it a second time.
+  const [notice, setNotice] = useState<Notice>()
   useEffect(() => {
-    if (readNotice(location.state)) {
+    const received = readNotice(location.state)
+    if (received) {
+      // Deliberate: the message must appear AFTER the first render (see above), so it
+      // cannot be derived during render.
+      // oxlint-disable-next-line react/set-state-in-effect
+      setNotice(received)
       void navigate(`${location.pathname}${location.search}`, { replace: true, state: null })
     }
   }, [location, navigate])
@@ -46,11 +54,9 @@ export function ApplicationsPage() {
         </Link>
       </div>
 
-      {notice && (
-        <p role="status" className="mt-4 rounded border border-green-700 p-3 text-green-800">
-          {t(`notice.${notice}`)}
-        </p>
-      )}
+      <p role="status" className={notice ? 'mt-4 rounded border border-green-700 p-3 text-green-800' : ''}>
+        {notice ? t(`notice.${notice}`) : ''}
+      </p>
 
       <div className="mt-6 flex flex-wrap items-end gap-4">
         <SearchBox value={q} onSearch={setQuery} />
