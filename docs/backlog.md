@@ -51,6 +51,14 @@ Pistes d'amélioration identifiées, pas encore réalisées.
   l'en-tête CORS. Côté frontend, le client pourrait alors afficher un message « erreur du
   serveur » (kind `http`, statut 500) distinct de `network`.
 
+- **Retenter le typage natif d'i18next, en temps limité (ADR 009).** Avec `i18next` 27.1.3
+  et `react-i18next` 18.0.2, `t('pagination.next')` était refusé : seules les clés préfixées
+  (`translation:pagination.next`) passaient, même avec une déclaration minimale. Le hook
+  `useT` et le type `MessageKey` contournent le problème mais ne vérifient plus les variables
+  (`{page, total}`). À retenter après une montée de version ou en comparant avec le projet
+  d'exemple de la bibliothèque ; fixer une limite (par exemple une heure) avant de commencer, et
+  garder `useT` si cela n'aboutit pas.
+
 - **Colonne « Ajoutée le » dans la liste des candidatures.** L'API trie par `created_at`
   décroissant, mais la date n'apparaît pas à l'écran : l'ordre semble arbitraire. Afficher
   `created_at` au format `JJ/MM/AAAA` (en réutilisant `formatDeadline`, en prenant les 10
