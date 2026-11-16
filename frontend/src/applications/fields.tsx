@@ -12,7 +12,7 @@ type TextFieldProps = {
   label: string
   value: string
   onChange: (value: string) => void
-  type?: 'text' | 'date'
+  type?: 'text' | 'date' | 'datetime-local'
   required?: boolean
   error?: string
 }
