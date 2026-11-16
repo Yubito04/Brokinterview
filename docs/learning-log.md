@@ -621,9 +621,53 @@ de relancer ; remplacer les minuteurs par un événement contrôlé par le test 
 serveur attend `release()`) ; ne pas « réparer » en allongeant un délai sans avoir démontré que
 c'était la cause, car cela peut masquer le problème (entrée au backlog).
 
+## 71. Un instant et une heure murale
+
+`2026-11-10T10:00:00Z` est un **instant** : le même pour tout le monde. « 11:00 » est une
+**heure murale** : elle n'a de sens qu'avec un fuseau (11:00 à Paris, 02:00 à Los Angeles pour
+cet instant). L'API stocke des instants ; un champ `datetime-local` manipule des heures murales
+sans fuseau. Le formulaire convertit dans les deux sens (`new Date(année, mois, jour, h, min)` lit
+l'heure dans le fuseau local ; `toISOString()` la renvoie en UTC). Les tests forcent deux fuseaux,
+en hiver et en été (le décalage de Paris passe de +1 à +2). Une date envoyée **sans** `Z` est lue
+comme UTC par notre API : une convention à écrire, car Python refuse de comparer une date sans
+fuseau et une date avec fuseau.
+
+## 72. Comparer à la précision de ce qu'on affiche
+
+Une date enregistrée à `10:00:30` s'affiche `10:00` dans le champ (précision : la minute).
+Si on compare des instants pour savoir « est-ce modifié ? », `10:00:00` envoyé par le formulaire
+diffère de `10:00:30` enregistré : le formulaire réécrirait une date que l'utilisateur n'a pas
+touchée. On compare donc ce que le champ affichait au départ avec ce qu'il affiche à la fin.
+
+## 73. Valider une règle sur l'état fusionné (PATCH)
+
+Un `PATCH` ne transporte que les champs modifiés. La règle « la réponse ne précède pas le
+contact » ne peut pas se vérifier sur les seuls champs reçus : envoyer `replied_at` seul doit être
+comparé au `contacted_at` **déjà enregistré**. On calcule donc l'état après mise à jour (valeur
+envoyée, sinon valeur enregistrée), puis on vérifie. Deux précisions : la règle ne s'applique que
+si la requête touche une des deux dates (renommer un ancien contact incohérent reste possible), et
+une requête refusée ne doit rien modifier en base.
+
+## 74. Confirmer une action destructrice : le focus sur le choix sûr
+
+Une confirmation n'a de valeur que si elle ne se valide pas par réflexe. On déplace le focus sur
+« Annuler » à l'ouverture (un `Entrée` machinal annule), `Échap` ferme, et le focus revient sur
+le bouton d'origine. Le texte dit **ce qui sera perdu** (« et ses 3 contacts »), et ne donne pas
+de chiffre quand on ne le connaît pas. On évite `window.confirm` : il est dans la langue du
+navigateur, comme les bulles de validation natives.
+
+## 75. Retirer une requête du cache pendant qu'un écran l'observe la relance
+
+Dans TanStack Query, `removeQueries` supprime l'entrée du cache. Si un écran encore monté
+l'observe, il la recrée au prochain rendu et refait la requête : après la suppression d'une
+candidature, l'écran redemandait ses contacts (un 404). Un test l'a montré. Le nettoyage se fait à
+la sortie de la page (fonction de nettoyage d'un `useEffect`), quand plus personne n'observe.
+Même idée que la clé de cache qui contient l'identifiant (`['contacts', id]`) : sans l'id, on
+voit un instant les contacts de la candidature précédente.
+
 ---
 
 ## Prochaines notions
 
-- Page de détail avec les contacts, puis extraction d'une offre avec relecture.
+- Extraction d'une offre avec relecture.
 - Authentification et limitation de débit avant tout déploiement.

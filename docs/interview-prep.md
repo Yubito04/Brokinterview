@@ -796,6 +796,39 @@ envoie deux clics et vérifie qu'un seul `POST` part, et j'ai vérifié par muta
 si je retire le `disabled`. **Limite :** cela ne protège pas contre deux onglets ; une vraie
 garantie demanderait une clé d'idempotence côté API.
 
+### Comment gères-tu une date avec heure entre le navigateur et l'API, avec les fuseaux horaires ?
+
+L'API stocke des instants UTC ; l'utilisateur lit et tape une heure murale dans son fuseau. Le
+champ `datetime-local` n'a pas de fuseau : je le convertis en instant avec `new Date(année, mois,
+jour, h, min).toISOString()` à l'envoi, et dans l'autre sens avec les accesseurs locaux
+(`getHours()` et non `getUTCHours()`). Le formulaire envoie donc toujours un `…Z`, et le serveur
+lit une date sans fuseau comme UTC, convention documentée et testée (Python refuse de comparer une
+date avec fuseau et une sans). Mes tests forcent deux fuseaux, en hiver et en été, et j'ai vérifié
+qu'ils échouent si je lis les heures en UTC. **Limite :** le sélecteur de date natif reste dans la
+langue du navigateur.
+
+### Où vit ta règle « la réponse ne précède pas le contact », et pourquoi pas dans le schéma ?
+
+Dans le backend, avec deux codes d'erreur stables que le frontend traduit. À la création, un
+validateur de champ suffit (et place l'erreur sous `replied_at`). À la modification, un `PATCH` ne
+contient que les champs envoyés : envoyer seulement `replied_at` doit être comparé au
+`contacted_at` déjà enregistré. Je calcule donc l'état fusionné dans l'endpoint et je lève une
+erreur de validation de même forme que celle de Pydantic. Je ne vérifie que si la requête touche
+une des deux dates, pour ne pas bloquer le renommage d'un ancien contact incohérent, et une
+requête refusée ne modifie rien. **Compromis :** deux endroits portent la règle (validateur et
+endpoint), partagés par une même fonction pure testée.
+
+### Comment as-tu conçu la suppression d'une candidature, et qu'as-tu trouvé en la testant ?
+
+Une confirmation dans la page, pas `window.confirm` (dans la langue du navigateur), qui dit ce
+qui sera perdu (le nombre de contacts, ou « contacts éventuels » si je ne le connais pas). Le
+focus va sur « Annuler », `Échap` ferme, les boutons sont désactivés pendant la requête et le
+focus va sur l'erreur en cas d'échec. En écrivant les tests, l'un a échoué : l'écran redemandait
+les contacts de la candidature supprimée, car je retirais les requêtes du cache alors que l'écran
+les observait encore. J'ai déplacé le nettoyage à la sortie de la page et ajouté un test.
+**Limite :** la suppression d'un contact, elle, est directe et irréversible ; c'est un choix
+assumé et noté dans l'ADR.
+
 ---
 
 ## Déploiement

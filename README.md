@@ -95,6 +95,14 @@ validate anything itself: the API's 422 answers are shown, translated, under eac
 validation bubbles are off with `noValidate`, because they would use the browser's language). An
 edit sends only the fields that changed. See [ADR 010](docs/adr/010-formulaire-de-candidature.md).
 
+## Detail page, contacts and deletion
+
+`/applications/:id` shows an application and its contacts. Contacts are added, edited and deleted
+in place (dates with a time, shown in the user's timezone and sent as UTC instants). The API
+refuses a reply that is earlier than, or without, its contact date (`reply_before_contact`,
+`reply_without_contact`). Deleting an application asks first and says how many contacts go with
+it. See [ADR 011](docs/adr/011-detail-contacts-et-suppression.md).
+
 ## CORS (browser access)
 
 The frontend (Vite, `http://localhost:5173`) lives on another origin than the API, so the
