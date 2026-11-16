@@ -1,4 +1,5 @@
 import { useEffect, useEffectEvent, useId, useRef, useState } from 'react'
+import { useT } from '../i18n/useT'
 import { useDebouncedValue } from './useDebouncedValue'
 
 export const SEARCH_DEBOUNCE_MS = 300
@@ -10,6 +11,7 @@ type Props = {
 }
 
 export function SearchBox({ value, onSearch }: Props) {
+  const t = useT()
   const id = useId()
   // What is typed right now. It moves on every keystroke; the URL only follows
   // once the typing pauses (debounce).
@@ -41,7 +43,7 @@ export function SearchBox({ value, onSearch }: Props) {
   return (
     <div className="flex flex-col gap-1">
       <label htmlFor={id} className="text-sm font-medium">
-        Rechercher (entreprise ou poste)
+        {t('filters.searchLabel')}
       </label>
       <input
         id={id}

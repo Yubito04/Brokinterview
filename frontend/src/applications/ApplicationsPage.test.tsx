@@ -1,9 +1,12 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { I18nextProvider } from 'react-i18next'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Application } from '../api/applications'
+import { createI18n } from '../i18n/createI18n'
+import { resources } from '../i18n/resources'
 import { createQueryClient } from '../queryClient'
 import { ApplicationsPage } from './ApplicationsPage'
 
@@ -68,10 +71,13 @@ function renderAt(url: string) {
   const router = createMemoryRouter([{ path: '/', element: <ApplicationsPage /> }], {
     initialEntries: [url],
   })
+  // The tests run in French (jsdom's browser says en-US, which would change the language).
   render(
-    <QueryClientProvider client={createQueryClient()}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>,
+    <I18nextProvider i18n={createI18n(resources, 'fr')}>
+      <QueryClientProvider client={createQueryClient()}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    </I18nextProvider>,
   )
   return { router, user: userEvent.setup() }
 }

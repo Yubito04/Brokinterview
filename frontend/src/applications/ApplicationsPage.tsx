@@ -3,11 +3,13 @@ import { ApplicationList } from './ApplicationList'
 import { PaginationNav } from './PaginationNav'
 import { SearchBox } from './SearchBox'
 import { StatusFilter } from './StatusFilter'
+import { useT } from '../i18n/useT'
 import { clampPage, totalPages } from './pagination'
 import { useApplicationFilters } from './useApplicationFilters'
 import { useApplications } from './useApplications'
 
 export function ApplicationsPage() {
+  const t = useT()
   const { status, q, page, setStatus, setQuery, setPage } = useApplicationFilters()
   const query = useApplications({ status, q, page })
   const { data } = query
@@ -24,7 +26,7 @@ export function ApplicationsPage() {
 
   return (
     <main className="mx-auto max-w-4xl p-8">
-      <h1 className="text-3xl font-bold">Candidatures</h1>
+      <h1 className="text-3xl font-bold">{t('applications.title')}</h1>
 
       <div className="mt-6 flex flex-wrap items-end gap-4">
         <SearchBox value={q} onSearch={setQuery} />
@@ -34,21 +36,21 @@ export function ApplicationsPage() {
       {/* A live region must exist before its text changes to be announced,
           so it is always rendered, empty most of the time. */}
       <p role="status" className="mt-2 h-5 text-sm text-gray-600">
-        {query.isFetching && data ? 'Mise à jour…' : ''}
+        {query.isFetching && data ? t('applications.updating') : ''}
       </p>
 
       <div className="mt-2">
-        {query.isPending && <p role="status">Chargement des candidatures…</p>}
+        {query.isPending && <p role="status">{t('applications.loading')}</p>}
 
         {query.isError && (
           <div role="alert" className="text-red-700">
-            <p>Impossible de charger les candidatures : {query.error.message}</p>
+            <p>{t('applications.loadError', { reason: query.error.message })}</p>
             <button
               type="button"
               onClick={() => void query.refetch()}
               className="mt-2 rounded border border-red-700 px-3 py-1.5"
             >
-              Réessayer
+              {t('applications.retry')}
             </button>
           </div>
         )}
@@ -56,8 +58,8 @@ export function ApplicationsPage() {
         {data && data.total === 0 && (
           <p>
             {hasFilters
-              ? 'Aucune candidature ne correspond aux filtres actuels.'
-              : "Aucune candidature pour l'instant."}
+              ? t('applications.empty.filtered')
+              : t('applications.empty.none')}
           </p>
         )}
 

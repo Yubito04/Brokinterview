@@ -4,7 +4,7 @@ import {
   parseStatus,
   type ApplicationStatus,
 } from '../api/applications'
-import { STATUS_LABELS } from './statusLabels'
+import { useT } from '../i18n/useT'
 
 type Props = {
   value: ApplicationStatus | undefined
@@ -12,13 +12,14 @@ type Props = {
 }
 
 export function StatusFilter({ value, onChange }: Props) {
+  const t = useT()
   const id = useId()
   return (
     <div className="flex flex-col gap-1">
       {/* htmlFor/id ties the label to the select: a screen reader announces
           "Statut" on focus, and clicking the label focuses the field. */}
       <label htmlFor={id} className="text-sm font-medium">
-        Statut
+        {t('filters.statusLabel')}
       </label>
       <select
         id={id}
@@ -26,10 +27,10 @@ export function StatusFilter({ value, onChange }: Props) {
         onChange={(event) => onChange(parseStatus(event.target.value))}
         className="rounded border border-gray-400 px-2 py-1.5"
       >
-        <option value="">Tous les statuts</option>
+        <option value="">{t('filters.allStatuses')}</option>
         {APPLICATION_STATUSES.map((status) => (
           <option key={status} value={status}>
-            {STATUS_LABELS[status]}
+            {t(`status.${status}`)}
           </option>
         ))}
       </select>
