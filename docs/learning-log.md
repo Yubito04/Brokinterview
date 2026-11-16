@@ -520,6 +520,38 @@ CORS, donc sans `Access-Control-Allow-Origin` ; le navigateur cache la réponse 
 (ajouté au README), et corriger la gestion des 500 (backlog). Un script de données de démo
 (`scripts/seed_demo.py`) refuse les bases `_test` et ne supprime rien sans `--reset`.
 
+## 60. Langue de l'interface du navigateur et langues annoncées aux sites : deux réglages
+
+Le navigateur peut être affiché en français tout en annonçant à chaque site une liste de
+langues préférées différente : `navigator.languages` vaut ici `['en-US', 'fr-FR', 'fr', 'en']`
+(et c'est la même liste qui part dans l'en-tête HTTP `Accept-Language`). Le premier élément
+étant l'anglais, une application sans choix mémorisé s'affiche en anglais : c'est le bon
+comportement, pas un bogue. Les deux réglages se modifient à des endroits différents des
+paramètres (langue d'affichage du navigateur ; langues préférées pour les pages web). Constaté
+en testant dans le navigateur ; d'où le sélecteur visible et la mémorisation du choix.
+
+## 61. Le `localStorage` est partagé par origine, pas par projet
+
+Une origine, c'est schéma + hôte + port (`http://localhost:5173`). Tous les projets servis sur
+cette adresse lisent et écrivent le **même** `localStorage` : on y a trouvé la clé d'un autre
+projet. D'où le préfixe `applyflow.` (`applyflow.lang`) : sans lui, deux projets qui choisiraient
+la clé `lang` s'écraseraient mutuellement. Corollaire : un projet qui tourne sur un autre port
+(ou en production sur un autre domaine) ne voit pas ces données, et un utilisateur qui change
+de navigateur ou d'appareil perd son choix de langue.
+
+## 62. Un message pour le développeur, un texte pour l'utilisateur
+
+Une erreur transporte deux choses distinctes : un `message` anglais, utile dans les journaux et
+le débogueur, et ce que l'utilisateur lit, choisi d'après un **code stable** et écrit dans sa
+langue. Côté API, Pydantic fournit déjà ce code : chaque erreur 422 a un `type`
+(`string_too_short`) et un `ctx` (`{min_length: 1}`) ; on traduit d'après eux et jamais d'après
+la phrase anglaise, qui peut changer d'une version à l'autre. Les codes se lisent dans les vraies
+réponses de l'API plutôt que de se deviner : une date mal écrite donne
+`date_from_datetime_parsing`, pas `date_parsing`. Une règle maison (« X ne peut pas être null »)
+doit avoir son propre code : `PydanticCustomError("null_not_allowed", ..., {"field": nom})`
+remplace un `ValueError`, que Pydantic aurait rangé sous le code générique `value_error`. Un
+code inconnu, ou un détail manquant, donne un texte générique plutôt qu'une phrase cassée.
+
 ---
 
 ## Prochaines notions
