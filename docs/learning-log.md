@@ -665,9 +665,57 @@ la sortie de la page (fonction de nettoyage d'un `useEffect`), quand plus person
 Même idée que la clé de cache qui contient l'identifiant (`['contacts', id]`) : sans l'id, on
 voit un instant les contacts de la candidature précédente.
 
+## 76. Montrer le résultat d'un modèle : signaler le vide, mais aussi le rempli
+
+Un modèle d'IA peut se taire (champ `null`) ou se tromper en affichant une valeur plausible. Les deux
+demandent une réaction différente. Le champ vide est marqué « non trouvé dans l'offre » (c'est une
+réponse du modèle, pas un oubli de l'utilisateur) ; le champ rempli porte un avertissement général,
+parce que le risque principal est une valeur fausse qui a l'air juste. L'évaluation de l'ADR 006
+désigne les deux champs à revérifier (le poste, la date limite). Aucune validation côté client :
+l'utilisateur relit, le serveur valide à la création. Principe : un humain valide avant tout
+enregistrement (« human in the loop »).
+
+## 77. Annuler une requête arrête l'attente, pas le travail du serveur
+
+`AbortController` coupe la connexion côté navigateur : `fetch` s'arrête et le code reprend la main.
+Le serveur, lui, a peut-être déjà envoyé l'appel au modèle et le paiera quand même. Annuler
+n'est donc pas un moyen d'éviter un coût déjà engagé ; c'est un moyen de ne plus attendre. Autre
+détail : une annulation volontaire n'est pas une erreur à afficher, et un test doit vérifier que le
+signal a été annulé, pas seulement que le bouton a disparu.
+
+## 78. Pourquoi ne pas mettre `maxLength` sur un texte collé
+
+Un `maxLength` fait **couper en silence** un texte collé trop long : l'utilisateur enverrait une
+offre sans sa fin sans le savoir. Sans `maxLength`, le texte reste entier, un compteur montre
+la limite et le serveur répond « trop long » (un refus qui ne coûte rien). `maxLength` reste
+adapté à un champ court où la coupe se voit (200 caractères).
+
+## 79. Compter comme le serveur : caractères et unités UTF-16
+
+`'😀'.length` vaut 2 en JavaScript (deux unités UTF-16) et `len('😀')` vaut 1 en Python (un
+caractère). Un compteur fondé sur `.length` annoncerait « trop long » pour un texte que le serveur
+accepte. `Array.from(texte).length` compte les caractères comme Python. Même principe que pour les
+dates : garder la même définition des deux côtés, et la tester avec le cas qui les distingue.
+
+## 80. Un réglage de développement qui expose des fichiers
+
+Vite refuse de lire un fichier hors de son dossier (`Denied ID`). `server.fs.allow: ['..']` le permet,
+mais ce réglage vaut aussi pour `npm run dev` : le serveur de développement pourrait servir tout le
+dépôt, `backend/.env` compris (la clé d'API), à quiconque l'atteint sur le réseau. On le limite au
+mode test (`mode === 'test'`). Réflexe : se demander, pour tout réglage qui « débloque » un test, à
+quoi il sert aussi ailleurs.
+
+## 81. Un commit qui enchaîne le test sans lire son résultat
+
+Une commande du type « lancer les tests puis commiter » commite même quand le fichier de test ne se
+charge plus (un test qui ne se charge pas affiche « no tests », pas une erreur de test). Les
+mutations lancées juste après semblaient prouver quelque chose alors qu'elles ne testaient rien. La
+règle, ajoutée au `CLAUDE.md` : enregistrer la sortie complète, vérifier qu'elle ne contient ni
+échec ni « no tests », puis commiter.
+
 ---
 
 ## Prochaines notions
 
-- Extraction d'une offre avec relecture.
+- Documentation finale, relecture du projet et préparation de la démonstration.
 - Authentification et limitation de débit avant tout déploiement.

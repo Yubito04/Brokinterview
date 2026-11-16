@@ -829,6 +829,35 @@ les observait encore. J'ai déplacé le nettoyage à la sortie de la page et ajo
 **Limite :** la suppression d'un contact, elle, est directe et irréversible ; c'est un choix
 assumé et noté dans l'ADR.
 
+### Comment présentes-tu le résultat d'un modèle d'IA à l'utilisateur, et pourquoi n'enregistres-tu rien automatiquement ?
+
+Deux risques différents : le modèle peut se taire (un champ `null`, marqué « non trouvé dans l'offre ») ou
+se tromper avec une valeur plausible, et le second est le plus dangereux. Le formulaire est donc prérempli et
+modifiable, les champs vides sont signalés, et un avertissement nomme les deux champs à revérifier :
+l'évaluation sur de vraies offres a montré un poste instable et une date choisie parmi plusieurs. Rien n'est
+enregistré sans l'action de l'utilisateur (le dernier filet contre l'injection de prompt, car le texte de
+l'offre est écrit par un tiers). Je n'ajoute aucune validation côté client : le serveur a le dernier mot à la
+création. **Limite :** ce sont des observations sur quelques offres, pas une mesure de fiabilité.
+
+### Que se passe-t-il quand l'utilisateur annule une extraction, et quand il relance après avoir corrigé ?
+
+Annuler coupe la requête côté navigateur (`AbortController`) : l'écran reprend la main sans erreur affichée,
+mais le serveur peut déjà avoir appelé le modèle et le facturer. Annuler arrête l'attente, pas la dépense.
+Pour relancer après des corrections manuelles, je compare le formulaire à la réponse de l'IA : s'il a été
+modifié, une confirmation s'affiche **avant** la requête (refuser ne coûte rien), avec le focus sur
+« Garder mes corrections ». Pendant l'attente le formulaire est gelé, pour que rien tapé ne soit écrasé, et un
+échec de la nouvelle extraction laisse les corrections intactes.
+
+### Comment testes-tu une fonctionnalité qui dépend d'un modèle d'IA, sans l'appeler ?
+
+L'API est derrière une interface ; côté frontend, un faux serveur répond aux scénarios (résultat complet,
+champs `null`, date illisible, texte hostile, 502, 503, 504, réseau, attente retenue). Les tests sont
+gratuits et répétables. Je vérifie aussi que mes tests testent bien : je modifie volontairement le code
+(retirer le signal d'annulation, ne plus demander confirmation...) et je constate qu'un test échoue. Un de
+ces essais a révélé un test insuffisant (l'annulation passait sans interrompre la requête), corrigé depuis.
+**Limite :** le vrai modèle n'est essayé qu'à la main, sur peu d'offres, ce qui ne remplace pas une
+évaluation chiffrée.
+
 ---
 
 ## Déploiement

@@ -103,6 +103,17 @@ refuses a reply that is earlier than, or without, its contact date (`reply_befor
 `reply_without_contact`). Deleting an application asks first and says how many contacts go with
 it. See [ADR 011](docs/adr/011-detail-contacts-et-suppression.md).
 
+## Import a job posting
+
+`/applications/import`: paste the text of a posting, the AI extracts the fields
+(`POST /job-postings/extract`), and the user reviews them in the creation form before anything is
+saved. Fields the AI did not find are marked "not found in the posting"; the filled ones come with
+a warning (the position and the deadline are the ones to double-check). Detected skills are shown
+but not saved. A new extraction asks before replacing hand-made corrections, and the text is sent
+to an AI service, which the screen says. Every extraction is a paid call: there is no
+authentication or rate limit yet, so do not deploy publicly. See
+[ADR 012](docs/adr/012-ecran-d-import-d-offre.md).
+
 ## CORS (browser access)
 
 The frontend (Vite, `http://localhost:5173`) lives on another origin than the API, so the
