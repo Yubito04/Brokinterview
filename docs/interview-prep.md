@@ -951,3 +951,33 @@ dépense chez le fournisseur d'IA, indépendant de mon code, pour limiter les d�
 **Réponse modèle.** À lancer à chaque envoi `pytest` (avec un service PostgreSQL), le test du contrat
 OpenAPI, puis `lint`, `check:api`, les tests et le build du frontend. Aujourd'hui, la règle « ne pas
 commiter sans tests verts » ne repose que sur ma discipline ; la CI la rendrait automatique.
+
+---
+
+## Démonstration de 5 minutes
+
+**Avant** (à faire chez moi, pas en direct) :
+- Relancer `.venv\Scripts\python.exe -m scripts.seed_demo --reset` pour des données propres
+  (`--reset` supprime toutes les candidatures et tous les contacts de la base de développement).
+- Avoir le backend (port 8765) et le frontend (http://localhost:5173) démarrés, et la langue
+  choisie dans le sélecteur.
+- Avoir **une offre préparée** dans un fichier hors du dépôt (`backend/samples/` est ignoré par Git),
+  prête à coller. Chaque extraction réelle **coûte de l'argent** : une seule, pas de répétition.
+- Si la clé d'IA manque, la démonstration reste valable : montrer l'erreur traduite « service non
+  disponible » (503) et dire pourquoi.
+
+| Temps | Montrer | Dire |
+|-------|---------|------|
+| 0:00 | Le schéma d'architecture du README | « React, FastAPI, PostgreSQL, et un appel à l'API d'IA seulement pour l'extraction. » |
+| 0:30 | La liste : filtre par statut, recherche, page 2, puis copier l'adresse dans un nouvel onglet | « Les filtres sont dans l'URL : on peut partager ou rafraîchir la vue. » |
+| 1:15 | Changer la langue (sans rechargement) | « Deux dictionnaires, un test qui échoue s'ils divergent ; les erreurs du serveur sont traduites d'après un code stable. » |
+| 1:45 | Nouvelle candidature : envoyer le formulaire vide | « Le formulaire ne valide rien : les erreurs viennent du serveur, sous chaque champ, avec le focus sur le premier. » |
+| 2:30 | Une candidature, ajouter un contact avec une réponse avant le contact | « Règle du backend avec un code d'erreur stable, vérifiée sur l'état fusionné pour un `PATCH`. » |
+| 3:15 | Supprimer la candidature : montrer la confirmation (le nombre de contacts, le focus sur « Annuler »), puis annuler | « Elle dit ce qui sera perdu, et le choix sûr a le focus. » |
+| 3:45 | Importer une offre : coller, extraire, montrer l'avertissement et « Non trouvé dans l'offre » | « Le risque principal, ce sont les champs remplis et faux ; le poste et la date sont les deux que mon évaluation a trouvés instables. » |
+| 4:30 | Corriger un champ, relancer l'extraction : la question avant d'écraser, « Garder » | « Elle s'affiche avant la requête : refuser ne coûte rien. » Puis créer la candidature. |
+| 4:50 | Conclure | « Ce qui manque avant la mise en ligne : authentification et limite d'appels (ADR 013). » |
+
+**Si on me coupe** : les trois choses à ne pas perdre sont (1) rien n'est enregistré sans relecture,
+(2) les erreurs viennent d'un code stable et sont traduites, (3) je sais ce qui manque avant le
+déploiement.
