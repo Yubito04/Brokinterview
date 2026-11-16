@@ -23,5 +23,10 @@ Pistes d'amélioration identifiées, pas encore réalisées.
   mettre à jour les deux, puis relancer `npm run build`, `npm run lint` et `npm run check:api`.
   Contexte : [ADR 008](adr/008-choix-techniques-du-frontend.md), section « Piège rencontré :
   TypeScript 7 contre openapi-typescript ».
+- **Rejouer une seule fois les requêtes de lecture, uniquement sur les erreurs réseau.**
+  Le client TanStack Query est configuré avec `retry: false` (`frontend/src/queryClient.ts`) :
+  les erreurs déjà traduites (422, 404, 503, 504, timeout) ne doivent pas être rejouées. Un
+  `retry` en fonction (un seul essai si `error.kind === 'network'`) couvrirait les coupures
+  brèves sans retarder les autres erreurs. À réserver aux requêtes GET, pas aux écritures.
 
 Contexte (extraction) : [ADR 006](adr/006-extraction-d-offres-par-llm.md), section « Évaluation réelle ».
