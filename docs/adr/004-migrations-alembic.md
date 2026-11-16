@@ -48,5 +48,6 @@ PostgreSQL, puis les faire évoluer sans perdre de données quand les modèles c
 - (−) La suite est un peu plus lente (migrations à chaque exécution).
 - (−) `reset_schema` supprime tout le schéma `public` de la base de test : il ne doit
   être appelé que sur elle, ce que le verrou de `db_safety.py` garantit.
-- (−) `requirements.txt` est encodé en UTF-16 (hérité d'un export PowerShell) ;
-  les diffs Git de ce fichier sont illisibles. À convertir en UTF-8 un jour.
+- (−) `requirements.txt` était encodé en UTF-16 (hérité d'un export PowerShell) ; les diffs
+  Git de ce fichier étaient illisibles. **Converti en UTF-8** (sans BOM), avec le même contenu :
+  72 paquets, installés aux mêmes versions dans un environnement neuf.

@@ -14,7 +14,6 @@ trouvé ; ce document est trié par priorité, avec une taille estimée.
 | Vérifier la confirmation annoncée avec un lecteur d'écran | S | un lecteur d'écran (NVDA) |
 | Tests instables (cause non démontrée) | inconnue | un nouvel échec, avec son message exact |
 | Ajouter captures d'écran et GIF au README | S | l'auteur du projet |
-| Convertir `requirements.txt` en UTF-8 | S | rien |
 | Colonne « Ajoutée le » | S | rien |
 | Rejouer une fois les lectures sur les erreurs réseau | S | rien |
 | Une erreur 500 garde ses en-têtes CORS | S | rien |
@@ -53,12 +52,6 @@ Authentification, limitation des appels à l'extraction et déploiement : voir
 - **Ajouter les captures d'écran et le GIF du parcours d'import au README.** La liste des fichiers
   attendus et leurs emplacements sont dans la section « Screenshots » du README. À faire à la main,
   après `seed_demo --reset`.
-
-- **Convertir `backend/requirements.txt` en UTF-8.** Le fichier est enregistré en UTF-16 (le
-  résultat d'une redirection PowerShell de `pip freeze`). `pip` le lit correctement (vérifié sur
-  un clone neuf), mais d'autres outils (éditeurs, `grep`, robots de mise à jour de
-  dépendances, certains services de déploiement) peuvent le lire de travers. Reconvertir en
-  UTF-8 et vérifier `pip install -r requirements.txt` dans un environnement neuf.
 
 - **Colonne « Ajoutée le » dans la liste des candidatures.** L'API trie par `created_at`
   décroissant, mais la date n'apparaît pas à l'écran : l'ordre semble arbitraire. Afficher
