@@ -6,4 +6,6 @@ import { afterEach } from 'vitest'
 // remove what each test rendered so the next one starts on an empty page.
 afterEach(() => {
   cleanup()
+  // A language chosen in one test must not be remembered by the next one.
+  localStorage.clear()
 })
